@@ -63,15 +63,7 @@ class GreedyPlayer(Player):
     @staticmethod
     def value(state: ConnectFour3D, player_stone: Stone):
         value = [0, 0, 0, 0, 0]
-        for connected_stones in GreedyPlayer.connected_stones_owned_by(state, player_stone):
+        for connected_stones in state.connected_stones_owned_by(player_stone):
             n_player_stones = sum([stone is player_stone for stone in connected_stones])
             value[4 - n_player_stones] += 1
         return tuple(value)
-
-
-    @staticmethod
-    def connected_stones_owned_by(state: ConnectFour3D, player_stone: Stone):
-        for connected_stones in state.connected_stones():
-            not_any_other = all((stone != player_stone.other() for stone in connected_stones))
-            if not_any_other:
-                yield connected_stones

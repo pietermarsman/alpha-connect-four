@@ -1,8 +1,7 @@
-from abc import ABCMeta, abstractmethod
-from typing import List, Tuple
+from typing import Tuple
 
 from player import Player
-from state import ConnectFour3D, Stone
+from state import ConnectFour3D
 
 
 class Observer(object):

@@ -2,6 +2,7 @@ from enum import Enum
 from itertools import product, permutations
 from typing import Tuple
 
+from memoize import Memoize
 
 FOUR = 4
 
@@ -115,9 +116,18 @@ class ConnectFour3D(object):
                 return Stone.WHITE
         return None
 
+    @Memoize()
     def connected_stones(self):
-        for solution in self.SOLUTIONS:
-            yield [self.stones[pos] for pos in solution]
+        return [[self.stones[pos] for pos in solution] for solution in self.SOLUTIONS]
+
+    def connected_stones_owned_by(self, player_stone: Stone):
+        player_connected_stones = []
+        other_stone = player_stone.other()
+        for connected_stones in self.connected_stones():
+            not_any_other = all((stone != other_stone for stone in connected_stones))
+            if not_any_other:
+                player_connected_stones.append(connected_stones)
+        return player_connected_stones
 
     def _is_full(self):
         return all(stone is not Stone.NONE for stone in self.stones.values())

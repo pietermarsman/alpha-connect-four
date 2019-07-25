@@ -1,11 +1,11 @@
 from game import TwoPlayerGame
 from observer import ConsoleObserver
-from player import RandomPlayer, ConsolePlayer
+from player import RandomPlayer, ConsolePlayer, GreedyPlayer
 from state import ConnectFour3D
 
 
 state = ConnectFour3D()
-player1 = RandomPlayer('White')
+player1 = GreedyPlayer('White')
 player2 = ConsolePlayer('Brown')
 observers = [ConsoleObserver()]
 

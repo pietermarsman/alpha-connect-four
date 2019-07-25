@@ -1,19 +1,24 @@
 from abc import ABCMeta, abstractmethod
+from operator import itemgetter, sub
 from random import choice
 
-from state import ConnectFour3D
+from state import ConnectFour3D, Stone
 
 
 class Player(metaclass=ABCMeta):
-    def __init__(self, name):
+    def __init__(self, name: str):
         self.name = name
+        self.color = None  # type: Stone
 
     def __str__(self):
-        return self.name
+        return '%s (%s)' % (self.name, self.color)
 
     @abstractmethod
     def decide(self, state: ConnectFour3D):
         pass
+
+    def set_color(self, color: Stone):
+        self.color = color
 
 
 class ConsolePlayer(Player):
@@ -42,3 +47,31 @@ class RandomPlayer(Player):
     def decide(self, state: ConnectFour3D):
         actions = state.possible_actions()
         return choice(list(actions))
+
+
+class GreedyPlayer(Player):
+    def decide(self, state: ConnectFour3D):
+        action_values = {}
+        for action in state.possible_actions():
+            new_state = state.take_action(action)
+            my_value = self.value(new_state, self.color)
+            other_value = self.value(new_state, self.color.other())
+            action_values[action] = tuple(map(sub, my_value, other_value))
+        best_action, _ = max(action_values.items(), key=itemgetter(1))
+        return best_action
+
+    @staticmethod
+    def value(state: ConnectFour3D, player_stone: Stone):
+        value = [0, 0, 0, 0, 0]
+        for connected_stones in GreedyPlayer.connected_stones_owned_by(state, player_stone):
+            n_player_stones = sum([stone is player_stone for stone in connected_stones])
+            value[4 - n_player_stones] += 1
+        return tuple(value)
+
+
+    @staticmethod
+    def connected_stones_owned_by(state: ConnectFour3D, player_stone: Stone):
+        for connected_stones in state.connected_stones():
+            not_any_other = all((stone != player_stone.other() for stone in connected_stones))
+            if not_any_other:
+                yield connected_stones

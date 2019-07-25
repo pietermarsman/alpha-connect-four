@@ -105,12 +105,19 @@ class ConnectFour3D(object):
         return self._has_winner() or self._is_full()
 
     def _has_winner(self):
+        return self.winner() is not None
+
+    def winner(self):
+        for connected_stones in self.connected_stones():
+            if all([stone == Stone.BROWN for stone in connected_stones]):
+                return Stone.BROWN
+            if all([stone == Stone.WHITE for stone in connected_stones]):
+                return Stone.WHITE
+        return None
+
+    def connected_stones(self):
         for solution in self.SOLUTIONS:
-            if all([self.stones[pos] == Stone.BROWN for pos in solution]):
-                return True
-            elif all([self.stones[pos] == Stone.WHITE for pos in solution]):
-                return True
-        return False
+            yield [self.stones[pos] for pos in solution]
 
     def _is_full(self):
         return all(stone is not Stone.NONE for stone in self.stones.values())

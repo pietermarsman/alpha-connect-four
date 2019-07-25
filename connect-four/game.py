@@ -9,7 +9,9 @@ class TwoPlayerGame(object):
         self.current_state = state
         self.state_history = [self.current_state]
         self.action_history = []
-        self.players = {Stone.WHITE: player1, Stone.BROWN: player2}
+        player1.set_color(Stone.WHITE)
+        player2.set_color(Stone.BROWN)
+        self.players = {player.color: player for player in [player1, player2]}
 
         if observers is None:
             self.observers = []
@@ -19,6 +21,12 @@ class TwoPlayerGame(object):
     def play(self):
         while not self.current_state.is_end_of_game():
             self._turn()
+        self.announce_winner()
+
+    def announce_winner(self):
+        winner = self.current_state.winner()
+        if winner is not None:
+            print('The winner is: %s' % self.players[winner])
 
     def next_player(self) -> Player:
         return self.players[self.current_state.next_stone]

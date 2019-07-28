@@ -13,6 +13,9 @@ class Player(metaclass=ABCMeta):
     def __str__(self):
         return '%s (%s)' % (self.name, self.color)
 
+    def __repr__(self):
+        return '%s(name=%s)' % (self.__class__.__name__, self.name)
+
     @abstractmethod
     def decide(self, state: ConnectFour3D):
         pass

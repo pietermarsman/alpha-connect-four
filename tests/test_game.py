@@ -1,5 +1,5 @@
 from game import TwoPlayerGame
-from player import RandomPlayer, GreedyPlayer
+from player import RandomPlayer, GreedyPlayer, MiniMaxPlayer
 from state import ConnectFour3D, Stone
 
 
@@ -26,3 +26,25 @@ def test_greedy_is_better_than_random():
     game.play()
 
     assert player2.color == game.current_state.winner()
+
+
+def test_minimax_is_better_than_random():
+    state = ConnectFour3D()
+    player1 = RandomPlayer('player 1')
+    player2 = MiniMaxPlayer('player 2')
+
+    game = TwoPlayerGame(state, player1, player2)
+    game.play()
+
+    assert player2.color == game.current_state.winner()
+
+
+def test_minimax_is_better_than_greedy():
+    state = ConnectFour3D()
+    player1 = GreedyPlayer('player 1')
+    player2 = MiniMaxPlayer('player 2')
+
+    game = TwoPlayerGame(state, player1, player2)
+    game.play()
+
+    assert player2.color == game.current_state.winner(), str(game.current_state)

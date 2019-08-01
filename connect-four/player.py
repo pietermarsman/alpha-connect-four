@@ -1,13 +1,17 @@
 from abc import ABCMeta, abstractmethod
-from operator import itemgetter, sub
+from operator import itemgetter
 from random import choice
 
+from analyzer import player_value
 from state import ConnectFour3D, Stone
 
 
 class Player(metaclass=ABCMeta):
-    def __init__(self, name: str):
-        self.name = name
+    def __init__(self, name: str = None):
+        if name is None:
+            self.name = self.__class__.__name__
+        else:
+            self.name = name
         self.color = None  # type: Stone
 
     def __str__(self):
@@ -57,18 +61,59 @@ class GreedyPlayer(Player):
         action_values = {}
         for action in state.possible_actions():
             new_state = state.take_action(action)
-            my_value = self.value(new_state, self.color)
-            other_value = self.value(new_state, self.color.other())
-            action_values[action] = tuple(map(sub, my_value, other_value))
+            action_values[action] = player_value(new_state, self.color)
         _, max_value = max(action_values.items(), key=itemgetter(1))
         best_actions = [action for action, value in action_values.items() if value == max_value]
         random_best_action = choice(best_actions)
         return random_best_action
 
-    @staticmethod
-    def value(state: ConnectFour3D, player_stone: Stone):
-        value = [0, 0, 0, 0, 0]
-        for connected_stones in state.connected_stones_owned_by(player_stone):
-            n_player_stones = sum([stone is player_stone for stone in connected_stones])
-            value[4 - n_player_stones] += 1
-        return tuple(value)
+
+class MiniMaxNode(object):
+    def __init__(self, state, player_color, state_color=None, parent=None):
+        self.state = state
+        self.player_color = player_color
+        if state_color is None:
+            self.state_color = player_color
+        else:
+            self.state_color = state_color
+        self.parent = parent
+        self.children = None
+        self.value = player_value(self.state, self.player_color)
+
+    def expand(self):
+        self.children = {
+            action: MiniMaxNode(self.state.take_action(action), self.player_color, self.state_color.other(), self)
+            for action in self.state.possible_actions()}
+        self.propagate_value()
+        return self.children.values()
+
+    def propagate_value(self):
+        if not self.state.is_end_of_game():
+            if self.player_color is self.state_color:
+                self.value = max([child.value for child in self.children.values()])
+            else:
+                self.value = min([child.value for child in self.children.values()])
+        if self.parent is not None:
+            self.parent.propagate_value()
+
+    def __lt__(self, other):
+        return self.value < other.value
+
+
+class MiniMaxPlayer(Player):
+    def __init__(self, name: str = None):
+        super().__init__(name)
+        self.expands = 16 ** 3
+
+    def decide(self, state: ConnectFour3D):
+        root = MiniMaxNode(state, self.color)
+        frontier = [root]
+        for _ in range(self.expands):
+            next_node = frontier.pop(0)
+            frontier.extend(next_node.expand())
+
+        action_values = {action: node.value for action, node in root.children.items()}
+        _, max_value = max(action_values.items(), key=itemgetter(1))
+        best_actions = [action for action, value in action_values.items() if value == max_value]
+        random_best_action = choice(best_actions)
+        return random_best_action

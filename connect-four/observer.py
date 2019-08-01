@@ -21,15 +21,23 @@ class Observer(object):
 
 
 class ConsoleObserver(Observer):
+    def __init__(self, show_state=True, show_action=True, show_end=True):
+        self.show_state = show_state
+        self.show_action = show_action
+        self.show_end = show_end
+
     def notify_new_state(self, game, state: ConnectFour3D):
-        print(state)
+        if self.show_state:
+            print(state)
 
     def notify_new_action(self, game, player: Player, action: Tuple[int, int]):
-        print('\n%s plays %s' % (player, action))
+        if self.show_action:
+            print('\n%s plays %s' % (player, action))
 
     def notify_end_game(self, game: TwoPlayerGame):
-        winner = game.current_state.winner()
-        print('The winner is: %s' % game.players[winner])
+        if self.show_end:
+            winner = game.current_state.winner()
+            print('The winner is: %s' % game.players[winner])
 
 
 class GameSerializer(Observer):

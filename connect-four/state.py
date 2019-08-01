@@ -2,8 +2,6 @@ from enum import Enum
 from itertools import product, permutations
 from typing import Tuple
 
-from memoize import Memoize
-
 FOUR = 4
 
 
@@ -116,7 +114,6 @@ class ConnectFour3D(object):
                 return Stone.WHITE
         return None
 
-    @Memoize()
     def connected_stones(self):
         return [[self.stones[pos] for pos in solution] for solution in self.SOLUTIONS]
 

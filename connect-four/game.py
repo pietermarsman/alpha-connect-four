@@ -1,10 +1,7 @@
 import datetime
-import json
-import os
-from uuid import uuid4
 
 from player import Player
-from state import ConnectFour3D, Stone, FOUR
+from state import ConnectFour3D, Stone
 
 
 class TwoPlayerGame(object):
@@ -21,7 +18,6 @@ class TwoPlayerGame(object):
         else:
             self.observers = observers
 
-        self.game_serializer = GameSerializer()
         self.state_history = [self.current_state]
         self.action_history = []
         self.datetime_start = None
@@ -29,63 +25,34 @@ class TwoPlayerGame(object):
 
     def play(self):
         self.datetime_start = datetime.datetime.utcnow()
+        player, pos = None, None
         while not self.current_state.is_end_of_game():
             self._turn()
         self.datetime_end = datetime.datetime.utcnow()
-        self.announce_winner()
-        self.save_game()
+        self._notify_end_game()
 
     def _turn(self):
         player = self.next_player()
         pos = player.decide(self.current_state)
+        self._notify_action(player, pos)
+
         self.current_state = self.current_state.take_action(pos)
+        self._notify_new_state(self.current_state)
 
         self.action_history.append(pos)
         self.state_history.append(self.current_state)
 
-        self._notify(player, pos, self.current_state)
-
     def next_player(self) -> Player:
         return self.players[self.current_state.next_stone]
 
-    def _notify(self, player, action, new_state):
+    def _notify_action(self, player, action):
         for observer in self.observers:
-            observer.notify_new_action(player, action)
-            observer.notify_new_state(new_state)
+            observer.notify_new_action(self, player, action)
 
-    def announce_winner(self):
-        winner = self.current_state.winner()
-        if winner is not None:
-            print('The winner is: %s' % self.players[winner])
+    def _notify_new_state(self, new_state):
+        for observer in self.observers:
+            observer.notify_new_state(self, new_state)
 
-    def save_game(self):
-        path = 'data/{date:%Y%m%d}/{id}.json'.format(date=datetime.datetime.now(), id=uuid4())
-        self.game_serializer.save_game(self, path)
-
-
-class GameSerializer(object):
-    @staticmethod
-    def serialize(game):
-        winner_stone = game.current_state.winner()
-        first_stone = game.state_history[0].next_stone
-        players = {stone: {'hash': hash(player), 'implementation': repr(player)}
-                   for stone, player in game.players.items()}
-
-        return {
-            'meta': {
-                'start': game.datetime_start.isoformat(),
-                'end': game.datetime_end.isoformat(),
-                'duration': (game.datetime_end - game.datetime_start).total_seconds()
-            },
-            'players': list(players.values()),
-            'winner': players[winner_stone],
-            'start player': players[first_stone],
-            'game': ''.join([hex(action[0] * FOUR + action[1])[2:] for action in game.action_history])
-        }
-
-    @staticmethod
-    def save_game(game, path):
-        data = GameSerializer.serialize(game)
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, 'w') as fout:
-            json.dump(data, fout, indent=4)
+    def _notify_end_game(self):
+        for observer in self.observers:
+            observer.notify_end_game(self)

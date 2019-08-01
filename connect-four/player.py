@@ -60,8 +60,10 @@ class GreedyPlayer(Player):
             my_value = self.value(new_state, self.color)
             other_value = self.value(new_state, self.color.other())
             action_values[action] = tuple(map(sub, my_value, other_value))
-        best_action, _ = max(action_values.items(), key=itemgetter(1))
-        return best_action
+        _, max_value = max(action_values.items(), key=itemgetter(1))
+        best_actions = [action for action, value in action_values.items() if value == max_value]
+        random_best_action = choice(best_actions)
+        return random_best_action
 
     @staticmethod
     def value(state: ConnectFour3D, player_stone: Stone):

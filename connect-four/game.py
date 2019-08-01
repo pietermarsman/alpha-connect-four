@@ -80,7 +80,7 @@ class GameSerializer(object):
             'players': list(players.values()),
             'winner': players[winner_stone],
             'start player': players[first_stone],
-            'game': [hex(action[0] * FOUR + action[1]) for action in game.action_history]
+            'game': ''.join([hex(action[0] * FOUR + action[1])[2:] for action in game.action_history])
         }
 
     @staticmethod

@@ -14,7 +14,7 @@ from state import ConnectFour3D, FOUR
 dataset = []
 labels = []
 
-for i in tqdm(range(100)):
+for i in tqdm(range(10000)):
     state = ConnectFour3D()
     player1 = RandomPlayer()
     player2 = RandomPlayer()
@@ -42,7 +42,9 @@ def create_model(kernel_size):
     pool1 = connect_layer(input, kernel_size)
     pool2 = connect_layer(pool1, kernel_size)
     pool3 = connect_layer(pool2, kernel_size)
-    collapse = MaxPooling3D((1, 1, 4), 1)(pool3)
+    pool4 = connect_layer(pool3, kernel_size)
+    pool5 = connect_layer(pool4, kernel_size)
+    collapse = MaxPooling3D((1, 1, 4), 1)(pool5)
     flatten = Flatten()(collapse)
     output = Dense(1, activation='sigmoid')(flatten)
 
@@ -59,7 +61,7 @@ def connect_layer(input, kernel_size):
     permute_y = pool_direction(conv, kernel_size, 1)
     permute_z = pool_direction(conv, kernel_size, 2)
 
-    pool = Maximum()([permute_x, permute_y, permute_z, conv])
+    pool = Maximum()([permute_x, permute_y, permute_z])
     return pool
 
 

@@ -48,12 +48,12 @@ def test_board_full_of_brown_stones_has_winner():
     state = ConnectFour3D()
     for pos in state.stones:
         state.stones[pos] = Stone.BROWN
-    assert state._has_winner()
+    assert state.has_winner()
 
 
 def test_empty_board_has_no_winner():
     state = ConnectFour3D()
-    assert not state._has_winner()
+    assert not state.has_winner()
 
 
 def test_simple_state_has_winner():
@@ -65,4 +65,4 @@ def test_simple_state_has_winner():
     state = state.take_action((0, 0))
     state = state.take_action((1, 0))
     state = state.take_action((0, 0))
-    assert state._has_winner()
+    assert state.has_winner()

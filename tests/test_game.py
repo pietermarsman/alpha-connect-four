@@ -1,6 +1,6 @@
-from connectfour3d import State, Stone
 from game import TwoPlayerGame
-from player import RandomPlayer, GreedyPlayer, MiniMaxPlayer
+from player import RandomPlayer, GreedyPlayer
+from state import State, Stone
 
 
 def test_game():

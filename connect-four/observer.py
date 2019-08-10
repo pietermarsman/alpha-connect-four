@@ -4,9 +4,9 @@ import os
 from typing import Tuple
 from uuid import uuid4
 
-from connectfour3d import State, FOUR
 from game import TwoPlayerGame
 from player import Player
+from state import State, FOUR
 
 
 class Observer(object):

@@ -7,9 +7,9 @@ from keras.metrics import binary_accuracy
 from keras.optimizers import Adam
 from tqdm import tqdm
 
-from connectfour3d import State, FOUR
 from game import TwoPlayerGame
 from player import RandomPlayer
+from state import State, FOUR
 
 dataset = []
 labels = []

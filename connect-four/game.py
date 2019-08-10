@@ -1,7 +1,7 @@
 import datetime
 
-from connectfour3d import State, Stone
 from player import Player
+from state import State, Stone
 
 
 class TwoPlayerGame(object):

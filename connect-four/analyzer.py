@@ -1,6 +1,6 @@
 from operator import sub
 
-from connectfour3d import State, Stone
+from state import Stone, State
 
 
 def count_lines(state: State, player_stone: Stone):

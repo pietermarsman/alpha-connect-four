@@ -1,6 +1,6 @@
 from itertools import product
 
-from connectfour3d import State, Stone, FOUR, _solutions_on_one_axis, _solutions_on_one_diagonal, \
+from state import State, Stone, FOUR, _solutions_on_one_axis, _solutions_on_one_diagonal, \
     _solutions_on_two_diagonals
 
 

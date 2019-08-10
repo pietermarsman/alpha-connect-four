@@ -3,7 +3,7 @@ from operator import itemgetter
 from random import choice
 
 from analyzer import player_value
-from connectfour3d import State, Stone
+from state import State, Stone
 
 
 class Player(metaclass=ABCMeta):

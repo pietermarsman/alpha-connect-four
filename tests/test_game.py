@@ -26,25 +26,3 @@ def test_greedy_is_better_than_random():
     game.play()
 
     assert player2.color == game.current_state.winner()
-
-
-def test_minimax_is_better_than_random():
-    state = State()
-    player1 = RandomPlayer('player 1')
-    player2 = MiniMaxPlayer('player 2')
-
-    game = TwoPlayerGame(state, player1, player2)
-    game.play()
-
-    assert player2.color == game.current_state.winner()
-
-
-def test_minimax_is_better_than_greedy():
-    state = State()
-    player1 = GreedyPlayer('player 1')
-    player2 = MiniMaxPlayer('player 2')
-
-    game = TwoPlayerGame(state, player1, player2)
-    game.play()
-
-    assert player2.color == game.current_state.winner(), str(game.current_state)

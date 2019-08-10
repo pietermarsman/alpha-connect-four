@@ -1,13 +1,13 @@
 import datetime
 
+from connectfour3d import State, Stone
 from player import Player
-from state import ConnectFour3D, Stone
 
 
 class TwoPlayerGame(object):
     """Two player game orchestrator"""
 
-    def __init__(self, state: ConnectFour3D, player1: Player, player2: Player, observers: list=None):
+    def __init__(self, state: State, player1: Player, player2: Player, observers: list = None):
         self.current_state = state
         player1.set_color(Stone.WHITE)
         player2.set_color(Stone.BROWN)

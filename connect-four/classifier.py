@@ -7,15 +7,15 @@ from keras.metrics import binary_accuracy
 from keras.optimizers import Adam
 from tqdm import tqdm
 
+from connectfour3d import State, FOUR
 from game import TwoPlayerGame
 from player import RandomPlayer
-from state import ConnectFour3D, FOUR
 
 dataset = []
 labels = []
 
 for i in tqdm(range(10000)):
-    state = ConnectFour3D()
+    state = State()
     player1 = RandomPlayer()
     player2 = RandomPlayer()
 
@@ -38,6 +38,8 @@ print('Labels shape:', labels.shape)
 
 
 def create_model(kernel_size):
+    # todo batch normalization
+    # todo l2 regularization
     input = Input(shape=(FOUR, FOUR, FOUR, kernel_size))
     pool1 = connect_layer(input, kernel_size)
     pool2 = connect_layer(pool1, kernel_size)
@@ -46,6 +48,7 @@ def create_model(kernel_size):
     pool5 = connect_layer(pool4, kernel_size)
     collapse = MaxPooling3D((1, 1, 4), 1)(pool5)
     flatten = Flatten()(collapse)
+    # todo predict move and winner (-1, 1)
     output = Dense(1, activation='sigmoid')(flatten)
 
     model = Model(inputs=input, outputs=output)
@@ -55,6 +58,7 @@ def create_model(kernel_size):
 
 
 def connect_layer(input, kernel_size):
+    # todo residual layer
     conv = Conv3D(kernel_size, 1)(input)
 
     permute_x = pool_direction(conv, kernel_size, 0)

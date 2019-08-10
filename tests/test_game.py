@@ -1,10 +1,10 @@
+from connectfour3d import State, Stone
 from game import TwoPlayerGame
 from player import RandomPlayer, GreedyPlayer, MiniMaxPlayer
-from state import ConnectFour3D, Stone
 
 
 def test_game():
-    state = ConnectFour3D()
+    state = State()
     player1 = RandomPlayer('player 1')
     player2 = RandomPlayer('player 2')
 
@@ -18,7 +18,7 @@ def test_game():
 
 
 def test_greedy_is_better_than_random():
-    state = ConnectFour3D()
+    state = State()
     player1 = RandomPlayer('player 1')
     player2 = GreedyPlayer('player 2')
 
@@ -29,7 +29,7 @@ def test_greedy_is_better_than_random():
 
 
 def test_minimax_is_better_than_random():
-    state = ConnectFour3D()
+    state = State()
     player1 = RandomPlayer('player 1')
     player2 = MiniMaxPlayer('player 2')
 
@@ -40,7 +40,7 @@ def test_minimax_is_better_than_random():
 
 
 def test_minimax_is_better_than_greedy():
-    state = ConnectFour3D()
+    state = State()
     player1 = GreedyPlayer('player 1')
     player2 = MiniMaxPlayer('player 2')
 

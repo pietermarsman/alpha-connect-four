@@ -54,7 +54,7 @@ class Stone(Enum):
             return 'w'
 
 
-class ConnectFour3D(object):
+class State(object):
     """State of a 3d connect four game
 
     Uses 3-dimensional coordinate system: x, y, z
@@ -87,7 +87,7 @@ class ConnectFour3D(object):
         height = min((z for (_, _, z), stone in pin.items() if stone is Stone.NONE))
         new_state = self.stones.copy()
         new_state[(x, y, height)] = self.next_stone
-        return ConnectFour3D(self.next_stone.other(), new_state)
+        return State(self.next_stone.other(), new_state)
 
     def _vertical_layer(self, x, y):
         assert 0 <= x < FOUR and 0 <= y < FOUR
@@ -123,6 +123,8 @@ class ConnectFour3D(object):
         return None
 
     def connected_stones(self):
+
+        # todo put in an 'analyzer' and be smarter by using the connected stones of parent state
         return [[self.stones[pos] for pos in solution] for solution in self.SOLUTIONS]
 
     def connected_stones_owned_by(self, player_stone: Stone):

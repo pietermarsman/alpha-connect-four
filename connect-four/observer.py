@@ -4,13 +4,13 @@ import os
 from typing import Tuple
 from uuid import uuid4
 
+from connectfour3d import State, FOUR
 from game import TwoPlayerGame
 from player import Player
-from state import ConnectFour3D, FOUR
 
 
 class Observer(object):
-    def notify_new_state(self, game: TwoPlayerGame, state: ConnectFour3D):
+    def notify_new_state(self, game: TwoPlayerGame, state: State):
         pass
 
     def notify_new_action(self, game: TwoPlayerGame, player: Player, action: Tuple[int, int]):
@@ -26,7 +26,7 @@ class ConsoleObserver(Observer):
         self.show_action = show_action
         self.show_end = show_end
 
-    def notify_new_state(self, game, state: ConnectFour3D):
+    def notify_new_state(self, game, state: State):
         if self.show_state:
             print(state)
 

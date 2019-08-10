@@ -3,7 +3,7 @@ from operator import itemgetter
 from random import choice
 
 from analyzer import player_value
-from state import ConnectFour3D, Stone
+from connectfour3d import State, Stone
 
 
 class Player(metaclass=ABCMeta):
@@ -21,7 +21,7 @@ class Player(metaclass=ABCMeta):
         return '%s(name=%s)' % (self.__class__.__name__, self.name)
 
     @abstractmethod
-    def decide(self, state: ConnectFour3D):
+    def decide(self, state: State):
         pass
 
     def set_color(self, color: Stone):
@@ -29,7 +29,7 @@ class Player(metaclass=ABCMeta):
 
 
 class ConsolePlayer(Player):
-    def decide(self, state: ConnectFour3D):
+    def decide(self, state: State):
         actions = list(sorted(state.possible_actions()))
         action = None
 
@@ -51,13 +51,13 @@ class ConsolePlayer(Player):
 
 
 class RandomPlayer(Player):
-    def decide(self, state: ConnectFour3D):
+    def decide(self, state: State):
         actions = state.possible_actions()
         return choice(list(actions))
 
 
 class GreedyPlayer(Player):
-    def decide(self, state: ConnectFour3D):
+    def decide(self, state: State):
         action_values = {}
         for action in state.possible_actions():
             new_state = state.take_action(action)
@@ -105,7 +105,7 @@ class MiniMaxPlayer(Player):
         super().__init__(name)
         self.expands = 16 ** 3
 
-    def decide(self, state: ConnectFour3D):
+    def decide(self, state: State):
         root = MiniMaxNode(state, self.color)
         frontier = [root]
         for _ in range(self.expands):

@@ -2,8 +2,6 @@ from enum import Enum
 from itertools import product, permutations
 from typing import Tuple
 
-import numpy as np
-
 FOUR = 4
 
 
@@ -138,35 +136,3 @@ class State(object):
 
     def _is_full(self):
         return all(stone is not Stone.NONE for stone in self.stones.values())
-
-    def to_numpy(self):
-        arr = [[[self._encode_position((x, y, z)) for z in range(FOUR)] for y in range(FOUR)] for x in range(FOUR)]
-        return np.array(arr)
-
-    def _encode_position(self, pos):
-        x, y, z = pos
-
-        stone = self[pos]
-        reachable = z == self._height(x, y)
-
-        corner = (x == 0 or x == 3) and (y == 0 or y == 3)
-        side = (x == 0 or x == 3 or y == 0 or y == 3) and not corner
-        middle = not (corner or side)
-        bottom = (z == 0)
-        top = (z == 3)
-        middle_z = not (bottom or top)
-        center = middle and middle_z
-
-        return (
-            stone == Stone.NONE,
-            stone == Stone.BROWN,
-            stone == Stone.WHITE,
-            reachable,
-            corner,
-            side,
-            middle,
-            bottom,
-            top,
-            middle_z,
-            center
-        )

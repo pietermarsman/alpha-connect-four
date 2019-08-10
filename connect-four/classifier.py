@@ -9,32 +9,30 @@ from tqdm import tqdm
 
 from game import TwoPlayerGame
 from player import RandomPlayer
-from state import State, FOUR
+from state import State, FOUR, Stone
 
-dataset = []
-labels = []
 
-for i in tqdm(range(10000)):
-    state = State()
-    player1 = RandomPlayer()
-    player2 = RandomPlayer()
+def generate_data(n_games):
+    global dataset, labels, game
+    dataset = []
+    labels = []
+    for i in tqdm(range(n_games)):
+        board = State()
+        player1 = RandomPlayer()
+        player2 = RandomPlayer()
 
-    game = TwoPlayerGame(state, player2, player1)
-    game.play()
+        game = TwoPlayerGame(board, player2, player1)
+        game.play()
 
-    if game.current_state.has_winner():
-        # dataset.append(game.current_state.to_numpy())
-        # labels.append(bool(game.current_state.winner().value - 1))
+        if game.current_state.has_winner():
+            history_size = len(game.state_history)
+            dataset.append(to_numpy(game.state_history[history_size - 2]))
+            labels.append(bool(game.current_state.winner().value - 1))
 
-        history_size = len(game.state_history)
-        dataset.append(game.state_history[history_size - 2].to_numpy())
-        labels.append(bool(game.current_state.winner().value - 1))
+    dataset = np.stack(dataset)
+    labels = np.array(labels)
 
-dataset = np.stack(dataset)
-labels = np.array(labels)
-
-print('Dataset shape:', dataset.shape)
-print('Labels shape:', labels.shape)
+    return dataset, labels
 
 
 def create_model(kernel_size):
@@ -84,6 +82,46 @@ def pool_direction(conv, kernel_size, direction):
     return permute
 
 
-model = create_model(11)
-print(model.summary())
-model.fit(dataset, labels, epochs=100, validation_split=.3, callbacks=[EarlyStopping(patience=2)])
+def to_numpy(board):
+    arr = [[[_encode_position(board, (x, y, z)) for z in range(FOUR)] for y in range(FOUR)] for x in range(FOUR)]
+    return np.array(arr)
+
+
+def _encode_position(state, pos):
+    x, y, z = pos
+
+    stone = state[pos]
+    reachable = z == state._height(x, y)
+
+    corner = (x == 0 or x == 3) and (y == 0 or y == 3)
+    side = (x == 0 or x == 3 or y == 0 or y == 3) and not corner
+    middle = not (corner or side)
+    bottom = (z == 0)
+    top = (z == 3)
+    middle_z = not (bottom or top)
+    center = middle and middle_z
+
+    return (
+        stone == Stone.NONE,
+        stone == Stone.BROWN,
+        stone == Stone.WHITE,
+        reachable,
+        corner,
+        side,
+        middle,
+        bottom,
+        top,
+        middle_z,
+        center
+    )
+
+
+if __name__ == '__main__':
+    dataset, labels = generate_data(100)
+
+    print('Dataset shape:', dataset.shape)
+    print('Labels shape:', labels.shape)
+
+    model = create_model(11)
+    print(model.summary())
+    model.fit(dataset, labels, epochs=100, validation_split=.3, callbacks=[EarlyStopping(patience=2)])

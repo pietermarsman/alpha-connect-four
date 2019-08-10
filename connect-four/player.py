@@ -70,8 +70,8 @@ class GreedyPlayer(Player):
 
 class MiniMaxNode(object):
     def __init__(self, state, player_color, state_color=None, parent=None):
-        self.state = state
-        self.player_color = player_color
+        self.state = state  # type: State
+        self.player_color = player_color  # type: Stone
         if state_color is None:
             self.state_color = player_color
         else:
@@ -103,7 +103,7 @@ class MiniMaxNode(object):
 class MiniMaxPlayer(Player):
     def __init__(self, name: str = None):
         super().__init__(name)
-        self.expands = 16 ** 3
+        self.expands = 16 ** 2
 
     def decide(self, state: State):
         root = MiniMaxNode(state, self.color)

@@ -17,14 +17,14 @@ def test_bottom_layer_is_empty_in_empty_state():
 
 
 def test_action_in_empty_state_has_single_stone():
-    state = State(Stone.WHITE)
+    state = State(next_stone=Stone.WHITE)
     action = (0, 0)
     new_state = state.take_action(action)
     assert 1 == sum([stone is Stone.WHITE for stone in new_state.stones.values()])
 
 
 def test_action_changes_next_player():
-    state = State(Stone.BROWN)
+    state = State(next_stone=Stone.BROWN)
     new_state = state.take_action((3, 3))
     assert Stone.WHITE is new_state.next_stone
 
@@ -45,9 +45,8 @@ def test_2_solutions_on_two_diagonals():
 
 
 def test_board_full_of_brown_stones_has_winner():
-    state = State()
-    for pos in state.stones:
-        state.stones[pos] = Stone.BROWN
+    stones = {pos: Stone.BROWN for pos in product(range(FOUR), range(FOUR), range(FOUR))}
+    state = State(stones=stones)
     assert state.has_winner()
 
 

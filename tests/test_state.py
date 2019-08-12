@@ -1,4 +1,3 @@
-from copy import deepcopy
 from itertools import product
 
 from state import State, Color, FOUR, _lines_on_one_axis, _lines_on_one_diagonal, \
@@ -55,13 +54,3 @@ def test_simple_state_has_winner():
     state = state.take_action(Action(1, 0))
     state = state.take_action(Action(0, 0))
     assert state.has_winner
-
-
-def test_when_action_is_taken_connected_stones_of_previous_state_dont_change():
-    state = State.empty()
-
-    lines_before = deepcopy(state.lines)
-    state.take_action(Action(0, 0))
-    lines_after = deepcopy(state.lines)
-
-    assert lines_before == lines_after

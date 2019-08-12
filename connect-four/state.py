@@ -1,7 +1,7 @@
 from collections import namedtuple
 from enum import Enum
 from itertools import product, permutations
-from typing import Dict, Set, List, NamedTuple, Union
+from typing import Dict, Set, NamedTuple, Union
 
 FOUR = 4
 
@@ -107,7 +107,6 @@ _State = NamedTuple('State', [
     ('pin_height', Dict[Action, int]),
     ('allowed_actions', Set[Action]),
     ('number_of_stones', int),
-    ('lines', Dict[int, List[Color]]),
     ('brown_lines', Dict[int, int]),
     ('white_lines', Dict[int, int]),
     ('winner', Union[Color, None])
@@ -130,10 +129,9 @@ class State(_State):
         allowed_actions = set(pin_height.keys())
         number_of_stones = 0
         winner = None
-        lines = {line_i: [stones[pos] for pos in line] for line_i, line in cls.LINES.items()}
         brown_lines = {line_i: 0 for line_i in cls.LINES.keys()}
         white_lines = {line_i: 0 for line_i in cls.LINES.keys()}
-        return cls(stones, next_color, pin_height, allowed_actions, number_of_stones, lines, brown_lines, white_lines,
+        return cls(stones, next_color, pin_height, allowed_actions, number_of_stones, brown_lines, white_lines,
                    winner)
 
     def take_action(self, action: Action) -> 'State':
@@ -145,7 +143,6 @@ class State(_State):
         pin_height = self.pin_height.copy()  # does not deepcopy keys, but these never have to change
         allowed_actions = self.allowed_actions.copy()  # does not deepcopy items, but these never have to change
         number_of_stones = self.number_of_stones
-        lines = self.lines.copy()  # does not deepcopy value lists, but these objects are never changed
         brown_lines = self.brown_lines.copy()
         white_lines = self.white_lines.copy()
         winner = self.winner
@@ -159,7 +156,6 @@ class State(_State):
         number_of_stones += 1
         affected_lines = self.POSITION_TO_LINES[position]
         for line_i, line_ii in affected_lines:
-            lines[line_i][line_ii] = self.next_color
             if self.next_color == Color.BROWN:
                 brown_lines[line_i] += 1
                 if brown_lines[line_i] == FOUR:
@@ -169,7 +165,7 @@ class State(_State):
                 if white_lines[line_i] == FOUR:
                     winner = Color.WHITE
 
-        return State(stones, next_color, pin_height, allowed_actions, number_of_stones, lines, brown_lines,
+        return State(stones, next_color, pin_height, allowed_actions, number_of_stones, brown_lines,
                      white_lines, winner)
 
     def __str__(self):

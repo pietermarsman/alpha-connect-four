@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from game import TwoPlayerGame
 from player import RandomPlayer
-from state import State, FOUR, Stone
+from state import State, FOUR, Color, Action
 
 
 def generate_data(n_games):
@@ -24,7 +24,7 @@ def generate_data(n_games):
         game = TwoPlayerGame(board, player2, player1)
         game.play()
 
-        if game.current_state.has_winner():
+        if game.current_state.winner is not None:
             history_size = len(game.state_history)
             dataset.append(to_numpy(game.state_history[history_size - 2]))
             labels.append(bool(game.current_state.winner().value - 1))
@@ -91,7 +91,7 @@ def _encode_position(state, pos):
     x, y, z = pos
 
     stone = state[pos]
-    reachable = z == state._height(x, y)
+    reachable = z == state.pin_height(Action(x, y))
 
     corner = (x == 0 or x == 3) and (y == 0 or y == 3)
     side = (x == 0 or x == 3 or y == 0 or y == 3) and not corner
@@ -102,9 +102,9 @@ def _encode_position(state, pos):
     center = middle and middle_z
 
     return (
-        stone == Stone.NONE,
-        stone == Stone.BROWN,
-        stone == Stone.WHITE,
+        stone == Color.NONE,
+        stone == Color.BROWN,
+        stone == Color.WHITE,
         reachable,
         corner,
         side,

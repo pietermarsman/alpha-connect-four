@@ -1,17 +1,18 @@
 import datetime
+from typing import Dict
 
 from player import Player
-from state import State, Stone
+from state import State, Color
 
 
 class TwoPlayerGame(object):
     """Two player game orchestrator"""
 
     def __init__(self, state: State, player1: Player, player2: Player, observers: list = None):
-        self.current_state = state
-        player1.set_color(Stone.WHITE)
-        player2.set_color(Stone.BROWN)
-        self.players = {player.color: player for player in [player1, player2]}
+        self.current_state = state  # type: State
+        player1.set_color(Color.WHITE)
+        player2.set_color(Color.BROWN)
+        self.players = {player.color: player for player in [player1, player2]}  # type: Dict[Color, Player]
 
         if observers is None:
             self.observers = []
@@ -43,7 +44,7 @@ class TwoPlayerGame(object):
         self.state_history.append(self.current_state)
 
     def next_player(self) -> Player:
-        return self.players[self.current_state.next_stone]
+        return self.players[self.current_state.next_color]
 
     def _notify_action(self, player, action):
         for observer in self.observers:

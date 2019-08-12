@@ -1,9 +1,10 @@
 from abc import ABCMeta, abstractmethod
 from operator import itemgetter
 from random import choice
+from typing import Union
 
 from analyzer import player_value
-from state import State, Stone
+from state import State, Color, FOUR
 
 
 class Player(metaclass=ABCMeta):
@@ -12,7 +13,7 @@ class Player(metaclass=ABCMeta):
             self.name = self.__class__.__name__
         else:
             self.name = name
-        self.color = None  # type: Stone
+        self.color = None  # type: Union[Color, None]
 
     def __str__(self):
         return '%s (%s)' % (self.name, self.color)
@@ -24,13 +25,13 @@ class Player(metaclass=ABCMeta):
     def decide(self, state: State):
         pass
 
-    def set_color(self, color: Stone):
+    def set_color(self, color: Color):
         self.color = color
 
 
 class ConsolePlayer(Player):
     def decide(self, state: State):
-        actions = list(sorted(state.possible_actions()))
+        actions = list(sorted(state.allowed_actions))
         action = None
 
         while action is None:
@@ -52,14 +53,14 @@ class ConsolePlayer(Player):
 
 class RandomPlayer(Player):
     def decide(self, state: State):
-        actions = state.possible_actions()
+        actions = state.allowed_actions
         return choice(list(actions))
 
 
 class GreedyPlayer(Player):
     def decide(self, state: State):
         action_values = {}
-        for action in state.possible_actions():
+        for action in state.allowed_actions:
             new_state = state.take_action(action)
             action_values[action] = player_value(new_state, self.color)
         _, max_value = max(action_values.items(), key=itemgetter(1))
@@ -71,7 +72,7 @@ class GreedyPlayer(Player):
 class MiniMaxNode(object):
     def __init__(self, state, player_color, state_color=None, parent=None):
         self.state = state  # type: State
-        self.player_color = player_color  # type: Stone
+        self.player_color = player_color  # type: Color
         if state_color is None:
             self.state_color = player_color
         else:
@@ -81,9 +82,12 @@ class MiniMaxNode(object):
         self.value = player_value(self.state, self.player_color)
 
     def expand(self):
-        self.children = {
-            action: MiniMaxNode(self.state.take_action(action), self.player_color, self.state_color.other(), self)
-            for action in self.state.possible_actions()}
+        if not self.state.is_end_of_game():
+            self.children = {
+                action: MiniMaxNode(self.state.take_action(action), self.player_color, self.state_color.other(), self)
+                for action in self.state.allowed_actions}
+        else:
+            self.children = {}
         self.propagate_value()
         return self.children.values()
 
@@ -101,16 +105,17 @@ class MiniMaxNode(object):
 
 
 class MiniMaxPlayer(Player):
-    def __init__(self, name: str = None):
+    def __init__(self, name: str = None, depth=2):
         super().__init__(name)
-        self.expands = 16 ** 2
+        self.expands = sum(((FOUR * FOUR) ** d for d in range(depth + 1)))
 
     def decide(self, state: State):
         root = MiniMaxNode(state, self.color)
         frontier = [root]
-        for _ in range(self.expands):
-            next_node = frontier.pop(0)
-            frontier.extend(next_node.expand())
+        for i in range(self.expands):
+            if len(frontier) > 0:
+                next_node = frontier.pop(0)
+                frontier.extend(next_node.expand())
 
         action_values = {action: node.value for action, node in root.children.items()}
         _, max_value = max(action_values.items(), key=itemgetter(1))

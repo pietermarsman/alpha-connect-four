@@ -1,29 +1,28 @@
 from collections import namedtuple
 from enum import Enum
 from itertools import product, permutations
-from typing import Tuple
+from typing import Dict, Set, List, NamedTuple, Union
 
 FOUR = 4
 
 
-def _position_solutions():
-    solutions = _solutions()
+def _position_to_lines():
+    lines = _lines()
     positions = {}
-    for solution_i, solution in enumerate(solutions):
-        for position_i, position in enumerate(solution):
+    for line_i, line in lines.items():
+        for position_i, position in enumerate(line):
             if position in positions:
-                positions[position].append((solution_i, position_i))
+                positions[position].append((line_i, position_i))
             else:
-                positions[position] = [(solution_i, position_i)]
-            positions[position] = positions[position].get(position, []) + [position]
+                positions[position] = [(line_i, position_i)]
     return positions
 
 
-def _solutions():
-    return _solutions_on_one_axis() + _solutions_on_one_diagonal() + _solutions_on_two_diagonals()
+def _lines():
+    return dict(enumerate(_lines_on_one_axis() + _lines_on_one_diagonal() + _lines_on_two_diagonals()))
 
 
-def _solutions_on_one_axis():
+def _lines_on_one_axis():
     base_solutions = [[(pos1, pos2, pos3) for pos3 in range(FOUR)]
                       for pos1, pos2 in product(range(FOUR), range(FOUR))]
     all_solutions = [tuple(Position(pos[i], pos[j], pos[k]) for pos in solution)
@@ -31,7 +30,7 @@ def _solutions_on_one_axis():
     return list(set(all_solutions))
 
 
-def _solutions_on_one_diagonal():
+def _lines_on_one_diagonal():
     base_solutions = [[(pos1, pos2, pos2) for pos2 in range(FOUR)] for pos1 in range(FOUR)] + \
                      [[(pos1, FOUR-1-pos2, FOUR-1-pos2) for pos2 in range(FOUR)] for pos1 in range(FOUR)]
     all_solutions = [tuple(Position(pos[i], pos[j], pos[k]) for pos in solution)
@@ -39,16 +38,25 @@ def _solutions_on_one_diagonal():
     return list(set(all_solutions))
 
 
-def _solutions_on_two_diagonals():
-    all_solutions = [tuple(Position(pos1, pos1, pos1) for pos1 in range(FOUR)),
-                     tuple(Position(pos1, FOUR - 1 - pos1, FOUR - 1 - pos1) for pos1 in range(FOUR))]
+def _lines_on_two_diagonals():
+    all_solutions = [
+        tuple(Position(pos1, pos1, pos1) for pos1 in range(FOUR)),
+        tuple(Position(pos1, FOUR - 1 - pos1, pos1) for pos1 in range(FOUR)),
+        tuple(Position(FOUR - 1 - pos1, pos1, pos1) for pos1 in range(FOUR)),
+        tuple(Position(FOUR - 1 - pos1, FOUR - 1 - pos1, pos1) for pos1 in range(FOUR))
+    ]
     return all_solutions
 
 
-class Stone(Enum):
+class Color(Enum):
     NONE = 0
     BROWN = 1
     WHITE = 2
+
+    @classmethod
+    def iter_colors(cls):
+        yield cls.BROWN
+        yield cls.WHITE
 
     def other(self):
         assert self is not self.NONE
@@ -66,7 +74,16 @@ class Stone(Enum):
             return 'w'
 
 
-Action = namedtuple('Action', ['x', 'y'])
+_Action = namedtuple('Action', ['x', 'y'])
+
+
+class Action(_Action):
+    @classmethod
+    def iter_actions(cls):
+        for x, y in product(range(FOUR), range(FOUR)):
+            yield Action(x, y)
+
+
 _Position = namedtuple('Position', ['x', 'y', 'z'])
 
 
@@ -76,115 +93,97 @@ class Position(_Position):
         for x, y, z in product(range(FOUR), range(FOUR), range(FOUR)):
             yield Position(x, y, z)
 
+    @classmethod
+    def from_action_and_height(cls, action: Action, height: int):
+        return Position(action.x, action.y, height)
 
-class State(object):
+    def to_action(self):
+        return Action(self.x, self.y)
+
+
+_State = NamedTuple('State', [
+    ('stones', Dict[Position, Color]),
+    ('next_color', Color),
+    ('pin_height', Dict[Action, int]),
+    ('allowed_actions', Set[Action]),
+    ('number_of_stones', int),
+    ('lines', Dict[int, List[Color]]),
+    ('brown_lines', Dict[int, int]),
+    ('white_lines', Dict[int, int]),
+    ('winner', Union[Color, None])
+])
+
+
+class State(_State):
     """State of a 3d connect four game
 
     Uses 3-dimensional coordinate system: x, y, z
     """
-    SOLUTIONS = _solutions()
-    POSITIONS = {
-        pos: [(solution_i, pos_i)]
-        for solution_i, solution in enumerate(SOLUTIONS)
-        for pos_i, pos in enumerate(solution)
-    }
-
-    def __init__(self, stones: dict = None, next_stone=Stone.WHITE, connected_stones=None, connected_owned_by=None):
-        if stones is None:
-            self._stones = {pos: Stone.NONE for pos in Position.iter_positions()}
-        else:
-            self._stones = stones
-
-        if connected_stones is None:
-            self._connected_stones = [[self._stones[pos] for pos in solution] for solution in self.SOLUTIONS]
-        else:
-            self._connected_stones = connected_stones
-
-        if connected_owned_by is None:
-            self._connected_stones_owned_by = {}
-        else:
-            self._connected_stones_owned_by = connected_owned_by
-
-        self.next_stone = next_stone
+    LINES = _lines()
+    POSITION_TO_LINES = _position_to_lines()
 
     @classmethod
-    def from_earlier_state(cls, previous_state: 'State', action: Action):
-        pin = previous_state._vertical_layer(action.x, action.y)
-        height = min((z for (_, _, z), stone in pin.items() if stone is Stone.NONE))
-        assert height < FOUR, 'Invalid move'
-        pos = Position(action.x, action.y, height)
-        new_state = previous_state._stones.copy()
-        new_state[(action.x, action.y, height)] = previous_state.next_stone
+    def empty(cls) -> 'State':
+        stones = {pos: Color.NONE for pos in Position.iter_positions()}
+        next_color = Color.WHITE
+        pin_height = {action: 0 for action in Action.iter_actions()}
+        allowed_actions = set(pin_height.keys())
+        number_of_stones = 0
+        winner = None
+        lines = {line_i: [stones[pos] for pos in line] for line_i, line in cls.LINES.items()}
+        brown_lines = {line_i: 0 for line_i in cls.LINES.keys()}
+        white_lines = {line_i: 0 for line_i in cls.LINES.keys()}
+        return cls(stones, next_color, pin_height, allowed_actions, number_of_stones, lines, brown_lines, white_lines,
+                   winner)
 
-        connected_stones = previous_state._connected_stones
-        for (solution_i, position_i) in cls.POSITIONS[pos]:
-            connected_stones[solution_i][position_i] = previous_state.next_stone
+    def take_action(self, action: Action) -> 'State':
+        assert action in self.allowed_actions
+        assert not self.has_winner()
 
-        return State(new_state, previous_state.next_stone.other())
+        stones = self.stones.copy()  # does not deepcopy keys, but these never have to change
+        next_color = self.next_color
+        pin_height = self.pin_height.copy()  # does not deepcopy keys, but these never have to change
+        allowed_actions = self.allowed_actions.copy()  # does not deepcopy items, but these never have to change
+        number_of_stones = self.number_of_stones
+        lines = self.lines.copy()  # does not deepcopy value lists, but these objects are never changed
+        brown_lines = self.brown_lines.copy()
+        white_lines = self.white_lines.copy()
+        winner = self.winner
 
-    @property
-    def stones(self):
-        return self._stones
+        position = Position.from_action_and_height(action, self.pin_height[action])
+        stones[position] = self.next_color
+        next_color = next_color.other()
+        pin_height[action] += 1
+        if pin_height[action] == FOUR:
+            allowed_actions.remove(action)
+        number_of_stones += 1
+        affected_lines = self.POSITION_TO_LINES[position]
+        for line_i, line_ii in affected_lines:
+            lines[line_i][line_ii] = self.next_color
+            if self.next_color == Color.BROWN:
+                brown_lines[line_i] += 1
+                if brown_lines[line_i] == FOUR:
+                    winner = Color.BROWN
+            else:
+                white_lines[line_i] += 1
+                if white_lines[line_i] == FOUR:
+                    winner = Color.WHITE
+
+        return State(stones, next_color, pin_height, allowed_actions, number_of_stones, lines, brown_lines,
+                     white_lines, winner)
 
     def __str__(self):
         state_array = [[['?' for _ in range(FOUR)] for _ in range(FOUR)] for _ in range(FOUR)]
-        for (x, y, z), stone in self._stones.items():
+        for (x, y, z), stone in self.stones.items():
             state_array[z][y][x] = str(stone)
         rows = [[''.join(row) for row in layer] for layer in reversed(state_array)]
         layers = ['\n'.join(layer_rows) for layer_rows in rows]
         board = '\n\n'.join(layers)
         return board
 
-    def __getitem__(self, pos):
-        return self._stones[pos]
-
-    def take_action(self, pos: Tuple[int, int]):
-        return State.from_earlier_state(self, Action(*pos))
-
-    def _vertical_layer(self, x, y):
-        assert 0 <= x < FOUR and 0 <= y < FOUR
-        return {(sx, sy, sz): stone for (sx, sy, sz), stone in self._stones.items() if sx == x and sy == y}
-
-    def _height(self, x, y):
-        for z in range(FOUR):
-            if self[(x, y, z)] == Stone.NONE:
-                return z
-        return FOUR
-
-    def possible_actions(self):
-        top_layer = self._horizontal_layer(3)
-        actions = {(x, y) for (x, y, _), stone in top_layer.items() if stone == Stone.NONE}
-        return actions
-
-    def _horizontal_layer(self, height):
-        assert 0 <= height < FOUR
-        return {(x, y, z): stone for (x, y, z), stone in self._stones.items() if z == height}
-
     def is_end_of_game(self):
-        return self.has_winner() or self._is_full()
+        is_full = all(stone is not Color.NONE for stone in self.stones.values())
+        return self.winner is not None or is_full
 
     def has_winner(self):
-        return self.winner() is not None
-
-    def winner(self):
-        for connected_stones in self._connected_stones:
-            if all([stone == Stone.BROWN for stone in connected_stones]):
-                return Stone.BROWN
-            if all([stone == Stone.WHITE for stone in connected_stones]):
-                return Stone.WHITE
-        return None
-
-    def connected_stones_owned_by(self, player_stone: Stone):
-        if player_stone not in self._connected_stones_owned_by:
-            player_connected_stones = []
-            other_stone = player_stone.other()
-            for connected_stones in self._connected_stones:
-                not_any_other = all((stone != other_stone for stone in connected_stones))
-                if not_any_other:
-                    player_connected_stones.append(connected_stones)
-            self._connected_stones_owned_by[player_stone] = player_connected_stones
-
-        return self._connected_stones_owned_by[player_stone]
-
-    def _is_full(self):
-        return all(stone is not Stone.NONE for stone in self._stones.values())
+        return self.winner is not None

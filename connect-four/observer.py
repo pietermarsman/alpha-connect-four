@@ -36,7 +36,7 @@ class ConsoleObserver(Observer):
 
     def notify_end_game(self, game: TwoPlayerGame):
         if self.show_end:
-            winner = game.current_state.winner()
+            winner = game.current_state.winner
             print('The winner is: %s' % game.players[winner])
 
 
@@ -57,7 +57,7 @@ class GameSerializer(Observer):
     @staticmethod
     def serialize(game):
         winner_stone = game.current_state.winner()
-        first_stone = game.state_history[0].next_stone
+        first_stone = game.state_history[0].next_color
         players = {stone: {'hash': hash(player), 'implementation': repr(player)}
                    for stone, player in game.players.items()}
         data = {

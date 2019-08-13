@@ -1,3 +1,4 @@
+import time
 from abc import ABCMeta, abstractmethod
 from operator import itemgetter
 from random import choice
@@ -5,6 +6,7 @@ from typing import Union
 
 from analyzer import player_value
 from state import State, Color, FOUR
+from tree import MiniMaxNode, MonteCarloNode
 
 
 class Player(metaclass=ABCMeta):
@@ -69,41 +71,6 @@ class GreedyPlayer(Player):
         return random_best_action
 
 
-class MiniMaxNode(object):
-    def __init__(self, state, player_color, state_color=None, parent=None):
-        self.state = state  # type: State
-        self.player_color = player_color  # type: Color
-        if state_color is None:
-            self.state_color = player_color
-        else:
-            self.state_color = state_color
-        self.parent = parent
-        self.children = None
-        self.value = player_value(self.state, self.player_color)
-
-    def expand(self):
-        if not self.state.is_end_of_game():
-            self.children = {
-                action: MiniMaxNode(self.state.take_action(action), self.player_color, self.state_color.other(), self)
-                for action in self.state.allowed_actions}
-        else:
-            self.children = {}
-        self.propagate_value()
-        return self.children.values()
-
-    def propagate_value(self):
-        if not self.state.is_end_of_game():
-            if self.player_color is self.state_color:
-                self.value = max([child.value for child in self.children.values()])
-            else:
-                self.value = min([child.value for child in self.children.values()])
-        if self.parent is not None:
-            self.parent.propagate_value()
-
-    def __lt__(self, other):
-        return self.value < other.value
-
-
 class MiniMaxPlayer(Player):
     def __init__(self, name: str = None, depth=2):
         super().__init__(name)
@@ -122,3 +89,16 @@ class MiniMaxPlayer(Player):
         best_actions = [action for action, value in action_values.items() if value == max_value]
         random_best_action = choice(best_actions)
         return random_best_action
+
+
+class MonteCarloPlayer(Player):
+    def __init__(self, name: str, budget=1000):
+        self.budget = budget
+        super().__init__(name)
+
+    def decide(self, state: State):
+        t0 = time.time()
+        root = MonteCarloNode(state, self.color)
+        while time.time() - t0 < self.budget / 1000:
+            root.search()
+        return root.best_action()

@@ -93,13 +93,16 @@ class MiniMaxPlayer(Player):
 
 class MonteCarloPlayer(Player):
     def __init__(self, name: str, exploration, budget=1000):
-        self.budget = budget
+        self.root = MonteCarloNode(State.empty(), exploration=exploration)
         self.exploration = exploration
+        self.budget = budget
         super().__init__(name)
 
     def decide(self, state: State):
         t0 = time.time()
-        root = MonteCarloNode(state, exploration=self.exploration)
+        self.root = self.root.find_state(state)
+        if self.root is None:
+            self.root = MonteCarloNode(state, exploration=self.exploration)
         while time.time() - t0 < self.budget / 1000:
-            root.search()
-        return root.best_action()
+            self.root.search()
+        return self.root.best_action()

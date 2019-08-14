@@ -111,3 +111,15 @@ class MonteCarloNode(object):
         self.brown_wins += final_state.winner == Color.BROWN
         if self.parent is not None:
             self.parent.propagate(final_state)
+
+    def find_state(self, state: State):
+        if self.state.number_of_stones < state.number_of_stones:
+            for child in self.children.values():
+                new_state = child.find_state(state)
+                if new_state is not None:
+                    return new_state
+        elif self.state.number_of_stones == state.number_of_stones:
+            if self.state == state:
+                return self
+
+        return None

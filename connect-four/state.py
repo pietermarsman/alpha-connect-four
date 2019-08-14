@@ -25,25 +25,25 @@ def _lines():
 def _lines_on_one_axis():
     base_solutions = [[(pos1, pos2, pos3) for pos3 in range(FOUR)]
                       for pos1, pos2 in product(range(FOUR), range(FOUR))]
-    all_solutions = [tuple(Position(pos[i], pos[j], pos[k]) for pos in solution)
+    all_solutions = [tuple(sorted(Position(pos[i], pos[j], pos[k]) for pos in solution))
                      for solution in base_solutions for i, j, k in permutations(range(3))]
     return list(set(all_solutions))
 
 
 def _lines_on_one_diagonal():
     base_solutions = [[(pos1, pos2, pos2) for pos2 in range(FOUR)] for pos1 in range(FOUR)] + \
-                     [[(pos1, FOUR-1-pos2, FOUR-1-pos2) for pos2 in range(FOUR)] for pos1 in range(FOUR)]
-    all_solutions = [tuple(Position(pos[i], pos[j], pos[k]) for pos in solution)
+                     [[(pos1, pos2, FOUR - 1 - pos2) for pos2 in range(FOUR)] for pos1 in range(FOUR)]
+    all_solutions = [tuple(sorted(Position(pos[i], pos[j], pos[k]) for pos in solution))
                      for solution in base_solutions for i, j, k in permutations(range(3))]
     return list(set(all_solutions))
 
 
 def _lines_on_two_diagonals():
     all_solutions = [
-        tuple(Position(pos1, pos1, pos1) for pos1 in range(FOUR)),
-        tuple(Position(pos1, FOUR - 1 - pos1, pos1) for pos1 in range(FOUR)),
-        tuple(Position(FOUR - 1 - pos1, pos1, pos1) for pos1 in range(FOUR)),
-        tuple(Position(FOUR - 1 - pos1, FOUR - 1 - pos1, pos1) for pos1 in range(FOUR))
+        tuple(sorted(Position(pos1, pos1, pos1) for pos1 in range(FOUR))),
+        tuple(sorted(Position(pos1, FOUR - 1 - pos1, pos1) for pos1 in range(FOUR))),
+        tuple(sorted(Position(FOUR - 1 - pos1, pos1, pos1) for pos1 in range(FOUR))),
+        tuple(sorted(Position(FOUR - 1 - pos1, FOUR - 1 - pos1, pos1) for pos1 in range(FOUR)))
     ]
     return all_solutions
 

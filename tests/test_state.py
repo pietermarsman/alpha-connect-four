@@ -1,7 +1,7 @@
 from itertools import product
 
 from state import State, Color, FOUR, _lines_on_one_axis, _lines_on_one_diagonal, \
-    _lines_on_two_diagonals, Action
+    _lines_on_two_diagonals, Action, _lines
 
 
 def test_all_actions_are_possible_in_empty_state():
@@ -39,6 +39,17 @@ def test_2_solutions_on_two_diagonals():
     assert 4 == len(two_diagonal_solutions)
 
 
+def test_lines_have_no_duplicates():
+    lines = _lines().values()
+    assert list(sorted(set(lines))) == list(sorted(lines))
+
+
+def test_lines_have_no_inverse_duplicates():
+    lines = list(sorted(_lines().values()))
+    inverse_lines = [tuple((line[i] for i in range(FOUR - 1, -1, -1))) for line in lines]
+    assert set() == set(lines) & set(inverse_lines)
+
+
 def test_empty_board_has_no_winner():
     state = State.empty()
     assert not state.has_winner()
@@ -54,3 +65,22 @@ def test_simple_state_has_winner():
     state = state.take_action(Action(1, 0))
     state = state.take_action(Action(0, 0))
     assert state.has_winner
+
+
+def test_winner_on_diagonal_line_along_side():
+    state = State.empty()
+    state = state.take_action(Action(0, 3))  # white
+    state = state.take_action(Action(0, 2))  # brown
+    state = state.take_action(Action(0, 2))  # white
+    state = state.take_action(Action(0, 1))  # brown
+    state = state.take_action(Action(0, 0))  # white
+    state = state.take_action(Action(0, 1))  # brown
+    state = state.take_action(Action(0, 1))  # white
+    state = state.take_action(Action(0, 0))  # brown
+    state = state.take_action(Action(1, 0))  # white
+    state = state.take_action(Action(0, 0))  # brown
+    state = state.take_action(Action(0, 0))  # white
+    print(state)
+    print(_lines())
+    assert state.is_end_of_game()
+    assert state.winner is Color.WHITE

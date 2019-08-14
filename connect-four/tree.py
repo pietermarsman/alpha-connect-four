@@ -1,3 +1,4 @@
+import math
 import random
 from typing import Dict, Union, List
 
@@ -41,20 +42,21 @@ class MiniMaxNode(object):
 
 
 class MonteCarloNode(object):
-    def __init__(self, state: State, color: Color, parent=None):
+    def __init__(self, state: State, parent=None, exploration=1.0):
         self.state = state
-        self.color = color
         self.parent = parent  # type: Union['MonteCarloNode', None]
+        self.exploration = exploration
         self.children = {}  # type: Dict[Action, MonteCarloNode]
         self.is_played = False
         self.visit_count = 0
-        self.wins = 0
+        self.white_wins = 0
+        self.brown_wins = 0
 
     def __str__(self):
-        return '%d / %d' % (self.wins, self.visit_count)
+        return 'Node(w=%d, b=%d, n=%d, uct=%.2f)' % (self.white_wins, self.brown_wins, self.visit_count, self.uct())
 
     def best_action(self):
-        action, _ = max(self.children.items(), key=lambda x: x[1].wins / x[1].visit_count)
+        action, _ = max(self.children.items(), key=lambda x: x[1].visit_count)
         return action
 
     def search(self):
@@ -65,10 +67,23 @@ class MonteCarloNode(object):
 
     def select(self) -> 'MonteCarloNode':
         if self.is_played and not self.state.is_end_of_game():
-            child = random.choice(list(self.children.values()))
+            child = max(self.children.values(), key=lambda c: c.uct())
             return child.select()
         else:
             return self
+
+    def uct(self):
+        """Upper confidence bound for trees"""
+        visit_count = self.visit_count + 0.001
+        value = self._state_player_reward() / visit_count
+        exploration = math.sqrt((2.0 * math.log(self.parent.visit_count)) / visit_count)
+        return value + self.exploration * exploration
+
+    def _state_player_reward(self):
+        if self.state.next_color == Color.WHITE:
+            return self.brown_wins
+        else:
+            return self.white_wins
 
     def unvisited_children(self) -> 'List[MonteCarloNode]':
         return [child for child in self.children.values() if child.visit_count == 0]
@@ -78,7 +93,7 @@ class MonteCarloNode(object):
         if not self.state.is_end_of_game():
             for action in self.state.allowed_actions:
                 state = self.state.take_action(action)
-                self.children[action] = MonteCarloNode(state, self.color, self)
+                self.children[action] = MonteCarloNode(state, self, self.exploration)
             return random.choice(self.unvisited_children())
         else:
             return self
@@ -92,6 +107,7 @@ class MonteCarloNode(object):
 
     def propagate(self, final_state: State):
         self.visit_count += 1
-        self.wins += final_state.winner == self.color
+        self.white_wins += final_state.winner == Color.WHITE
+        self.brown_wins += final_state.winner == Color.BROWN
         if self.parent is not None:
             self.parent.propagate(final_state)

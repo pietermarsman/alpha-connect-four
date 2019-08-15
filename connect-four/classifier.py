@@ -1,43 +1,50 @@
 import numpy as np
-from keras import Input, Model
+from keras import Input, Model, regularizers
 from keras.callbacks import EarlyStopping
 from keras.layers import Dense, Conv3D, Flatten, AveragePooling3D, MaxPooling3D, Maximum, Reshape, \
-    RepeatVector, Permute
-from keras.metrics import binary_accuracy
+    RepeatVector, Permute, BatchNormalization, Activation, Add
 from keras.optimizers import Adam
 from tqdm import tqdm
 
 from game import TwoPlayerGame
 from player import RandomPlayer
-from state import State, FOUR, Color, Action
+from state import State, FOUR, Color, Action, Position
 
 
 def generate_data(n_games):
     global dataset, labels, game
     dataset = []
     labels = []
-    for i in tqdm(range(n_games)):
-        board = State()
+    actions = []
+    for _ in tqdm(range(n_games)):
+        board = State.empty()
         player1 = RandomPlayer()
         player2 = RandomPlayer()
 
         game = TwoPlayerGame(board, player2, player1)
         game.play()
 
-        if game.current_state.winner is not None:
-            history_size = len(game.state_history)
-            dataset.append(to_numpy(game.state_history[history_size - 2]))
-            labels.append(bool(game.current_state.winner().value - 1))
+        history_index = len(game.state_history) - 2
+        state = game.state_history[history_index]
+        dataset.append(to_numpy(state))
+        winner = game.current_state.winner
+        if winner == state.next_color:
+            labels.append(1)
+        elif winner == state.next_color.other():
+            labels.append(-1)
+        else:
+            labels.append(0)
+        actions.append(game.action_history[history_index].to_int())
 
     dataset = np.stack(dataset)
     labels = np.array(labels)
+    action_array = np.zeros((len(actions), FOUR * FOUR))
+    action_array[np.arange(action_array.shape[0]), actions] = 1
 
-    return dataset, labels
+    return dataset, labels, action_array
 
 
 def create_model(kernel_size):
-    # todo batch normalization
-    # todo l2 regularization
     input = Input(shape=(FOUR, FOUR, FOUR, kernel_size))
     pool1 = connect_layer(input, kernel_size)
     pool2 = connect_layer(pool1, kernel_size)
@@ -46,25 +53,37 @@ def create_model(kernel_size):
     pool5 = connect_layer(pool4, kernel_size)
     collapse = MaxPooling3D((1, 1, 4), 1)(pool5)
     flatten = Flatten()(collapse)
-    # todo predict move and winner (-1, 1)
-    output = Dense(1, activation='sigmoid')(flatten)
+    output_play = Dense(16, activation='softmax')(flatten)
+    output_win = Dense(1, activation='tanh')(flatten)
 
-    model = Model(inputs=input, outputs=output)
+    model = Model(inputs=input, outputs=[output_play, output_win])
     optimizer = Adam()
-    model.compile(optimizer, 'binary_crossentropy', metrics=[binary_accuracy])
+    metics = {'dense_1': 'categorical_accuracy', 'dense_2': 'mae'}
+    model.compile(optimizer, ['categorical_crossentropy', 'mse'], metrics=metics)
     return model
 
 
-def connect_layer(input, kernel_size):
-    # todo residual layer
-    conv = Conv3D(kernel_size, 1)(input)
+def connect_layer(input, kernel_size, c=10 ** -4):
+    """Residual layer modeled after AlphaGo"""
+    l2 = regularizers.l2(c)
+    pool1 = line_convolution(input, kernel_size, l2)
+    norm1 = BatchNormalization()(pool1)
+    relu1 = Activation('relu')(norm1)
+    pool2 = line_convolution(relu1, kernel_size, l2)
+    norm2 = BatchNormalization()(pool2)
+    add = Add()([input, norm2])
+    relu2 = Activation('relu')(add)
 
-    permute_x = pool_direction(conv, kernel_size, 0)
-    permute_y = pool_direction(conv, kernel_size, 1)
-    permute_z = pool_direction(conv, kernel_size, 2)
+    return relu2
 
-    pool = Maximum()([permute_x, permute_y, permute_z])
-    return pool
+
+def line_convolution(input, kernel_size, l2):
+    conv1 = Conv3D(kernel_size, 1, kernel_regularizer=l2)(input)
+    permute_x1 = pool_direction(conv1, kernel_size, 0)
+    permute_y1 = pool_direction(conv1, kernel_size, 1)
+    permute_z1 = pool_direction(conv1, kernel_size, 2)
+    pool1 = Maximum()([permute_x1, permute_y1, permute_z1])
+    return pool1
 
 
 def pool_direction(conv, kernel_size, direction):
@@ -83,15 +102,16 @@ def pool_direction(conv, kernel_size, direction):
 
 
 def to_numpy(board):
-    arr = [[[_encode_position(board, (x, y, z)) for z in range(FOUR)] for y in range(FOUR)] for x in range(FOUR)]
+    arr = [[[_encode_position(board, Position(x, y, z)) for z in range(FOUR)] for y in range(FOUR)] for x in
+           range(FOUR)]
     return np.array(arr)
 
 
-def _encode_position(state, pos):
+def _encode_position(state: State, pos: Action):
     x, y, z = pos
 
-    stone = state[pos]
-    reachable = z == state.pin_height(Action(x, y))
+    stone = state.stones[pos]
+    reachable = z == state.pin_height[Action(x, y)]
 
     corner = (x == 0 or x == 3) and (y == 0 or y == 3)
     side = (x == 0 or x == 3 or y == 0 or y == 3) and not corner
@@ -117,11 +137,11 @@ def _encode_position(state, pos):
 
 
 if __name__ == '__main__':
-    dataset, labels = generate_data(100)
+    dataset, labels, actions = generate_data(10000)
 
     print('Dataset shape:', dataset.shape)
     print('Labels shape:', labels.shape)
 
     model = create_model(11)
     print(model.summary())
-    model.fit(dataset, labels, epochs=100, validation_split=.3, callbacks=[EarlyStopping(patience=2)])
+    model.fit(dataset, [actions, labels], epochs=100, validation_split=.3, callbacks=[EarlyStopping(patience=2)])

@@ -1,3 +1,5 @@
+from random import randint
+
 import numpy as np
 from keras import Input, Model, regularizers
 from keras.callbacks import EarlyStopping
@@ -24,13 +26,13 @@ def generate_data(n_games):
         game = TwoPlayerGame(board, player2, player1)
         game.play()
 
-        history_index = len(game.state_history) - 2
+        history_index = randint(0, len(game.state_history) - 1)
         state = game.state_history[history_index]
         dataset.append(to_numpy(state))
         winner = game.current_state.winner
-        if winner == state.next_color:
+        if winner is state.next_color:
             labels.append(1)
-        elif winner == state.next_color.other():
+        elif winner is state.next_color.other():
             labels.append(-1)
         else:
             labels.append(0)
@@ -141,6 +143,7 @@ if __name__ == '__main__':
 
     print('Dataset shape:', dataset.shape)
     print('Labels shape:', labels.shape)
+    print('Action shape:', actions.shape)
 
     model = create_model(11)
     print(model.summary())

@@ -19,7 +19,7 @@ class TwoPlayerGame(object):
         else:
             self.observers = observers
 
-        self.state_history = [self.current_state]
+        self.state_history = []
         self.action_history = []
         self.datetime_start = None
         self.datetime_end = None

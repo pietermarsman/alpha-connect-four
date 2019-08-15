@@ -19,14 +19,13 @@ class TwoPlayerGame(object):
         else:
             self.observers = observers
 
-        self.state_history = []
+        self.state_history = [self.current_state]
         self.action_history = []
         self.datetime_start = None
         self.datetime_end = None
 
     def play(self):
         self.datetime_start = datetime.datetime.utcnow()
-        player, pos = None, None
         while not self.current_state.is_end_of_game():
             self._turn()
         self.datetime_end = datetime.datetime.utcnow()

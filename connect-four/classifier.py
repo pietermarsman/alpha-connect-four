@@ -26,7 +26,7 @@ def generate_data(n_games):
         game = TwoPlayerGame(board, player2, player1)
         game.play()
 
-        history_index = randint(0, len(game.state_history) - 1)
+        history_index = randint(0, len(game.action_history) - 1)
         state = game.state_history[history_index]
         dataset.append(to_numpy(state))
         winner = game.current_state.winner

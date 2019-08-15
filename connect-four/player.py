@@ -101,6 +101,7 @@ class MonteCarloPlayer(Player):
     def decide(self, state: State):
         t0 = time.time()
         self.root = self.root.find_state(state)
+        self.root.parent = None
         if self.root is None:
             self.root = MonteCarloNode(state, exploration=self.exploration)
         while time.time() - t0 < self.budget / 1000:

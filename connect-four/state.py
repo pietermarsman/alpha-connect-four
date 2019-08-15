@@ -83,6 +83,14 @@ class Action(_Action):
         for x, y in product(range(FOUR), range(FOUR)):
             yield Action(x, y)
 
+    @classmethod
+    def from_int(cls, i):
+        x, y = divmod(i, 4)
+        return cls(x, y)
+
+    def to_int(self):
+        return self.x * 4 + self.y
+
 
 _Position = namedtuple('Position', ['x', 'y', 'z'])
 

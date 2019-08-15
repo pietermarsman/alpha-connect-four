@@ -84,3 +84,8 @@ def test_winner_on_diagonal_line_along_side():
     print(_lines())
     assert state.is_end_of_game()
     assert state.winner is Color.WHITE
+
+
+def test_action_to_int():
+    action = Action(2, 3)
+    assert action == Action.from_int(action.to_int())

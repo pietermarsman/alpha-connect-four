@@ -15,10 +15,9 @@ class Player(metaclass=ABCMeta):
             self.name = self.__class__.__name__
         else:
             self.name = name
-        self.color = None  # type: Union[Color, None]
 
     def __str__(self):
-        return '%s (%s)' % (self.name, self.color)
+        return self.name
 
     def __repr__(self):
         return '%s(name=%s)' % (self.__class__.__name__, self.name)
@@ -26,9 +25,6 @@ class Player(metaclass=ABCMeta):
     @abstractmethod
     def decide(self, state: State):
         pass
-
-    def set_color(self, color: Color):
-        self.color = color
 
 
 class ConsolePlayer(Player):
@@ -64,7 +60,7 @@ class GreedyPlayer(Player):
         action_values = {}
         for action in state.allowed_actions:
             new_state = state.take_action(action)
-            action_values[action] = player_value(new_state, self.color)
+            action_values[action] = player_value(new_state, state.next_color)
         _, max_value = max(action_values.items(), key=itemgetter(1))
         best_actions = [action for action, value in action_values.items() if value == max_value]
         random_best_action = choice(best_actions)
@@ -77,7 +73,7 @@ class MiniMaxPlayer(Player):
         self.expands = sum(((FOUR * FOUR) ** d for d in range(depth + 1)))
 
     def decide(self, state: State):
-        root = MiniMaxNode(state, self.color)
+        root = MiniMaxNode(state, state.next_color)
         frontier = [root]
         for i in range(self.expands):
             if len(frontier) > 0:

@@ -1,5 +1,4 @@
 import datetime
-from typing import Dict
 
 from player import Player
 from state import State, Color
@@ -10,9 +9,7 @@ class TwoPlayerGame(object):
 
     def __init__(self, state: State, player1: Player, player2: Player, observers: list = None):
         self.current_state = state  # type: State
-        player1.set_color(Color.WHITE)
-        player2.set_color(Color.BROWN)
-        self.players = {player.color: player for player in [player1, player2]}  # type: Dict[Color, Player]
+        self.players = {Color.WHITE: player1, Color.BROWN: player2}
 
         if observers is None:
             self.observers = []

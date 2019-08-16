@@ -126,8 +126,9 @@ class MonteCarloNode(object):
 
 
 class AlphaConnectNode(object):
-    def __init__(self, state: State, parent=None, action_prob=1.0, c_puct=1.0, temperature=1.0):
+    def __init__(self, state: State, model, parent=None, action_prob=None, c_puct=1.0, temperature=1.0):
         self.state = state
+        self.model = model
         self.parent = parent  # type: Union[AlphaConnectNode, None]
         self.c_puct = c_puct
         self.temperature = temperature
@@ -166,13 +167,12 @@ class AlphaConnectNode(object):
             for action in self.state.allowed_actions:
                 action_prob = action_probs[action]
                 state = self.state.take_action(action)
-                self.children[action] = AlphaConnectNode(state, self, action_prob=action_prob, c_puct=self.c_puct,
-                                                         temperature=self.temperature)
+                self.children[action] = AlphaConnectNode(state, self.model, self, action_prob=action_prob,
+                                                         c_puct=self.c_puct, temperature=self.temperature)
         return state_value
 
     def simulate(self) -> Tuple[float, Dict[Action, float]]:
         """Get value for next color and action probabilities"""
-        # todo get p_a and v from nn
         if self.state.is_end_of_game():
             if self.state.winner == self.state.next_color:
                 state_value = -1.0
@@ -180,9 +180,13 @@ class AlphaConnectNode(object):
                 state_value = 1.0
             else:
                 state_value = 0.0
+            action_probs = None
         else:
-            state_value = 0.0
-        action_probs = {action: 1.0 for action in Action.iter_actions()}
+            array = self.state.to_numpy(batch=True)
+            pred_actions, pred_value = self.model.predict(array)
+            state_value = pred_value.item()
+            action_probs = dict(zip(Action.iter_actions(), pred_actions[0]))
+
         return state_value, action_probs
 
     def propagate(self, value: float):

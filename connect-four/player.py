@@ -3,6 +3,8 @@ from abc import ABCMeta, abstractmethod
 from operator import itemgetter
 from random import choice
 
+from keras.engine.saving import load_model
+
 from analyzer import player_value
 from state import State, FOUR
 from tree import MiniMaxNode, MonteCarloNode, AlphaConnectNode
@@ -106,11 +108,11 @@ class MonteCarloPlayer(Player):
 
 class AlphaConnectPlayer(Player):
     def __init__(self, name: str, model_path, exploration=1.0, temperature=1.0, budget=1000):
-        self.root = AlphaConnectNode(State.empty(), c_puct=exploration, temperature=temperature)
+        self.model = load_model(model_path)
+        self.root = AlphaConnectNode(State.empty(), self.model, c_puct=exploration, temperature=temperature)
         self.exploration = exploration
         self.temperature = temperature
         self.budget = budget
-        # self.model = load_model(model_path)
         self.policy_history = []
         super().__init__(name)
 

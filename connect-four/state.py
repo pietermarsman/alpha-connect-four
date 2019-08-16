@@ -3,6 +3,8 @@ from enum import Enum
 from itertools import product, permutations
 from typing import Dict, Set, NamedTuple, Union
 
+import numpy as np
+
 FOUR = 4
 
 
@@ -202,3 +204,35 @@ class State(_State):
 
     def has_winner(self):
         return self.winner is not None
+
+    def to_numpy(self, batch=False):
+        arr = [[[self._encode_position(Position(x, y, z)) for z in range(FOUR)] for y in range(FOUR)]
+               for x in range(FOUR)]
+        if batch:
+            arr = np.array([arr, ])
+        return np.array(arr)
+
+    def _encode_position(self, pos: Position):
+        x, y, z = pos
+
+        stone = self.stones[pos]
+        reachable = z == self.pin_height[Action(x, y)]
+
+        corner = (x == 0 or x == 3) and (y == 0 or y == 3)
+        side = (x == 0 or x == 3 or y == 0 or y == 3) and not corner
+        middle = not (corner or side)
+        bottom = (z == 0)
+        top = (z == 3)
+        middle_z = not (bottom or top)
+
+        return (
+            stone == self.next_color,
+            stone == self.next_color.other(),
+            reachable,
+            corner,
+            side,
+            middle,
+            bottom,
+            top,
+            middle_z,
+        )

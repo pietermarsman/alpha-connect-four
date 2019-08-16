@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from game import TwoPlayerGame
 from player import RandomPlayer
-from state import State, FOUR, Color, Action, Position
+from state import State, FOUR
 
 
 def generate_data(n_games):
@@ -28,7 +28,7 @@ def generate_data(n_games):
 
         history_index = randint(0, len(game.action_history) - 1)
         state = game.state_history[history_index]
-        dataset.append(to_numpy(state))
+        dataset.append(state.to_numpy())
         winner = game.current_state.winner
         if winner is state.next_color:
             labels.append(1)
@@ -103,41 +103,6 @@ def pool_direction(conv, kernel_size, direction):
     return permute
 
 
-def to_numpy(board):
-    arr = [[[_encode_position(board, Position(x, y, z)) for z in range(FOUR)] for y in range(FOUR)] for x in
-           range(FOUR)]
-    return np.array(arr)
-
-
-def _encode_position(state: State, pos: Action):
-    x, y, z = pos
-
-    stone = state.stones[pos]
-    reachable = z == state.pin_height[Action(x, y)]
-
-    corner = (x == 0 or x == 3) and (y == 0 or y == 3)
-    side = (x == 0 or x == 3 or y == 0 or y == 3) and not corner
-    middle = not (corner or side)
-    bottom = (z == 0)
-    top = (z == 3)
-    middle_z = not (bottom or top)
-    center = middle and middle_z
-
-    return (
-        stone == Color.NONE,
-        stone == Color.BROWN,
-        stone == Color.WHITE,
-        reachable,
-        corner,
-        side,
-        middle,
-        bottom,
-        top,
-        middle_z,
-        center
-    )
-
-
 if __name__ == '__main__':
     dataset, labels, actions = generate_data(10000)
 
@@ -145,6 +110,6 @@ if __name__ == '__main__':
     print('Labels shape:', labels.shape)
     print('Action shape:', actions.shape)
 
-    model = create_model(11)
+    model = create_model(9)
     print(model.summary())
     model.fit(dataset, [actions, labels], epochs=100, validation_split=.3, callbacks=[EarlyStopping(patience=2)])

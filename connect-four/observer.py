@@ -36,7 +36,7 @@ class ConsoleObserver(Observer):
     def notify_end_game(self, game: TwoPlayerGame):
         if self.show_end:
             winner = game.current_state.winner
-            print('The winner is: %s' % game.players[winner])
+            print('The winner is: %s (%s)' % (game.players[winner], winner))
 
 
 class GameSerializer(Observer):

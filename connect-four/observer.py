@@ -2,11 +2,10 @@ import datetime
 import json
 import os
 from typing import Tuple
-from uuid import uuid4
 
 from game import TwoPlayerGame
-from player import Player
-from state import State, FOUR
+from player import Player, AlphaConnectPlayer
+from state import State, FOUR, Color
 
 
 class Observer(object):
@@ -42,33 +41,39 @@ class ConsoleObserver(Observer):
 
 class GameSerializer(Observer):
     def __init__(self):
-        self.path = 'data/{date:%Y%m%d}/{id}.json'.format(date=datetime.datetime.now(), id=uuid4())
+        self.path = 'data/{date:%Y%m%d_%H%M%S}.json'.format(date=datetime.datetime.now())
 
     def notify_end_game(self, game: TwoPlayerGame):
         if game.datetime_end is not None:
             self.save_game(game)
 
     def save_game(self, game):
-        data = GameSerializer.serialize(game)
+        data = self.serialize(game)
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
         with open(self.path, 'w') as fout:
             json.dump(data, fout, indent=4)
 
-    @staticmethod
-    def serialize(game):
-        winner_stone = game.current_state.winner()
-        first_stone = game.state_history[0].next_color
-        players = {stone: {'hash': hash(player), 'implementation': repr(player)}
-                   for stone, player in game.players.items()}
+    @classmethod
+    def serialize(cls, game):
+        winner_color = game.current_state.winner
+        first_color = game.state_history[0].next_color
         data = {
-            'meta': {
-                'start': game.datetime_start.isoformat(),
-                'end': game.datetime_end.isoformat(),
-                'duration': (game.datetime_end - game.datetime_start).total_seconds()
-            },
-            'players': list(players.values()),
-            'winner': players[winner_stone],
-            'start player': players[first_stone],
+            'winner': winner_color.value,
+            'starter': first_color.value,
             'game': ''.join([hex(action[0] * FOUR + action[1])[2:] for action in game.action_history])
         }
+        return data
+
+
+class AlphaConnectSerializer(GameSerializer):
+    @classmethod
+    def serialize(cls, game):
+        data = super().serialize(game)
+
+        player1 = game.players[Color.WHITE]
+        player2 = game.players[Color.BROWN]
+        is_self_play = isinstance(player1, AlphaConnectPlayer) and player1 is player2
+        if is_self_play:
+            data['policies'] = [{action.to_hex(): value for action, value in policy.items()}
+                                for policy in player1.policy_history]
         return data

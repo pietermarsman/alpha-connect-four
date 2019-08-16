@@ -85,11 +85,22 @@ class Action(_Action):
 
     @classmethod
     def from_int(cls, i):
-        x, y = divmod(i, 4)
+        x, y = divmod(i, FOUR)
         return cls(x, y)
 
     def to_int(self):
-        return self.x * 4 + self.y
+        return self.x * FOUR + self.y
+
+    @classmethod
+    def from_hex(cls, i):
+        x, y = divmod(int(i, base=FOUR * FOUR), FOUR)
+        return cls(x, y)
+
+    def to_hex(self):
+        return hex(self.x * FOUR + self.y)[2:]
+
+    def __str__(self):
+        return self.to_hex()
 
 
 _Position = namedtuple('Position', ['x', 'y', 'z'])

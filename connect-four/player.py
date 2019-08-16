@@ -2,11 +2,10 @@ import time
 from abc import ABCMeta, abstractmethod
 from operator import itemgetter
 from random import choice
-from typing import Union
 
 from analyzer import player_value
-from state import State, Color, FOUR
-from tree import MiniMaxNode, MonteCarloNode
+from state import State, FOUR
+from tree import MiniMaxNode, MonteCarloNode, AlphaConnectNode
 
 
 class Player(metaclass=ABCMeta):
@@ -103,3 +102,29 @@ class MonteCarloPlayer(Player):
         while time.time() - t0 < self.budget / 1000:
             self.root.search()
         return self.root.best_action()
+
+
+class AlphaConnectPlayer(Player):
+    def __init__(self, name: str, model_path, temperature=1.0, budget=1000):
+        self.root = AlphaConnectNode(State.empty(), temperature=temperature)
+        self.temperature = temperature
+        self.budget = budget
+        # self.model = load_model(model_path)
+        self.policy_history = []
+        super().__init__(name)
+
+    def decide(self, state: State):
+        t0 = time.time()
+        self.root = self.root.find_state(state)
+        self.root.parent = None
+        if self.root is None:
+            self.root = AlphaConnectNode(state, temperature=self.temperature)
+        while time.time() - t0 < self.budget / 1000:
+            self.root.search()
+        self.save_policy()
+        action, _ = self.root.sample_action_state()
+        return action
+
+    def save_policy(self):
+        print(self.root)
+        self.policy_history.append(self.root.policy())

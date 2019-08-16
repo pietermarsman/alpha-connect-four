@@ -105,8 +105,9 @@ class MonteCarloPlayer(Player):
 
 
 class AlphaConnectPlayer(Player):
-    def __init__(self, name: str, model_path, temperature=1.0, budget=1000):
-        self.root = AlphaConnectNode(State.empty(), temperature=temperature)
+    def __init__(self, name: str, model_path, exploration=1.0, temperature=1.0, budget=1000):
+        self.root = AlphaConnectNode(State.empty(), c_puct=exploration, temperature=temperature)
+        self.exploration = exploration
         self.temperature = temperature
         self.budget = budget
         # self.model = load_model(model_path)
@@ -118,13 +119,12 @@ class AlphaConnectPlayer(Player):
         self.root = self.root.find_state(state)
         self.root.parent = None
         if self.root is None:
-            self.root = AlphaConnectNode(state, temperature=self.temperature)
+            self.root = AlphaConnectNode(state, c_puct=self.exploration, temperature=self.temperature)
         while time.time() - t0 < self.budget / 1000:
             self.root.search()
         self.save_policy()
-        action, _ = self.root.sample_action_state()
+        action = self.root.sample_action()
         return action
 
     def save_policy(self):
-        print(self.root)
         self.policy_history.append(self.root.policy())

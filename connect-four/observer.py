@@ -31,7 +31,7 @@ class ConsoleObserver(Observer):
 
     def notify_new_action(self, game, player: Player, action: Tuple[int, int]):
         if self.show_action:
-            print('\n%s plays %s' % (player, action))
+            print('\n%s (%s) plays %s' % (player, game.current_state.next_color, action))
 
     def notify_end_game(self, game: TwoPlayerGame):
         if self.show_end:

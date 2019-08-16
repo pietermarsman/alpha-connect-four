@@ -1,6 +1,6 @@
 import math
 import random
-from typing import Dict, Union, List
+from typing import Dict, Union, List, Tuple
 
 from analyzer import player_value
 from state import Action, State, Color
@@ -126,29 +126,25 @@ class MonteCarloNode(object):
 
 
 class AlphaConnectNode(object):
-    def __init__(self, state: State, parent=None, c_puct=1.0, temperature=1.0):
+    def __init__(self, state: State, parent=None, action_prob=1.0, c_puct=1.0, temperature=1.0):
         self.state = state
         self.parent = parent  # type: Union[AlphaConnectNode, None]
         self.c_puct = c_puct
         self.temperature = temperature
         self.children = {}  # type: Dict[Action, AlphaConnectNode]
         self.is_played = False
-        self.white_wins = 0
-        self.brown_wins = 0
 
         self.visit_count = 0
         self.total_value = 0
-        # todo use nn probs
-        self.action_prob = 1.0
+        self.action_prob = action_prob
 
     def __str__(self):
-        return 'Node(w=%d, b=%d, n=%d)' % (self.white_wins, self.brown_wins, self.visit_count)
+        return 'Node(%d / %d = %.2f)' % (self.total_value, self.visit_count, self.total_value / self.visit_count)
 
     def search(self):
         selected_node = self.select()
-        expanded_node = selected_node.expand()
-        final_state = expanded_node.simulate()
-        expanded_node.propagate(final_state)
+        value = selected_node.expand_and_simulate()
+        selected_node.propagate(value)
 
     def select(self) -> 'AlphaConnectNode':
         if self.is_played and not self.state.is_end_of_game():
@@ -163,39 +159,37 @@ class AlphaConnectNode(object):
         exploration = self.action_prob * (math.sqrt(self.parent.visit_count) / (1 + visit_count))
         return average_value + self.c_puct * exploration
 
-    def sample_action_state(self):
-        action_states = list(self.children.items())
-        action, state = random.choices(action_states, [state.policy_value() for _, state in action_states])[0]
-        return action, state
-
-    def expand(self) -> 'AlphaConnectNode':
+    def expand_and_simulate(self):
         self.is_played = True
+        state_value, action_probs = self.simulate()
         if not self.state.is_end_of_game():
             for action in self.state.allowed_actions:
+                action_prob = action_probs[action]
                 state = self.state.take_action(action)
-                self.children[action] = AlphaConnectNode(state, self, self.temperature)
-            return random.choice(self.unvisited_children())
+                self.children[action] = AlphaConnectNode(state, self, action_prob=action_prob, c_puct=self.c_puct,
+                                                         temperature=self.temperature)
+        return state_value
+
+    def simulate(self) -> Tuple[float, Dict[Action, float]]:
+        """Get value for next color and action probabilities"""
+        # todo get p_a and v from nn
+        if self.state.is_end_of_game():
+            if self.state.winner == self.state.next_color:
+                state_value = -1.0
+            elif self.state.winner == self.state.next_color.other():
+                state_value = 1.0
+            else:
+                state_value = 0.0
         else:
-            return self
+            state_value = 0.0
+        action_probs = {action: 1.0 for action in Action.iter_actions()}
+        return state_value, action_probs
 
-    def unvisited_children(self) -> 'List[AlphaConnectNode]':
-        return [child for child in self.children.values() if child.visit_count == 0]
-
-    def simulate(self) -> 'State':
-        state = self.state
-        # todo use nn value
-        while not state.is_end_of_game():
-            action = random.choice(list(state.allowed_actions))
-            state = state.take_action(action)
-        return state
-
-    def propagate(self, final_state: State):
-        # todo aggregate value instead of wins
+    def propagate(self, value: float):
         self.visit_count += 1
-        self.white_wins += final_state.winner == Color.WHITE
-        self.brown_wins += final_state.winner == Color.BROWN
+        self.total_value += value
         if self.parent is not None:
-            self.parent.propagate(final_state)
+            self.parent.propagate(-value)
 
     def find_state(self, state: State):
         if self.state.number_of_stones < state.number_of_stones:
@@ -209,11 +203,15 @@ class AlphaConnectNode(object):
 
         return None
 
-    def policy(self) -> Dict[Action, float]:
-        return {action: node.policy_value() for action, node in self.children.items()}
+    def sample_action(self):
+        actions, probabilities = zip(*self.policy().items())
+        action = random.choices(list(actions), list(probabilities))[0]
+        return action
 
-    def policy_value(self) -> float:
-        return self.exponentiated_visit_count() / self.parent.exponentiated_visit_count()
+    def policy(self) -> Dict[Action, float]:
+        raw_policy = {action: node.exponentiated_visit_count() for action, node in self.children.items()}
+        sum_policy = sum(raw_policy.values())
+        return {action: policy_value / sum_policy for action, policy_value in raw_policy.items()}
 
     def exponentiated_visit_count(self) -> float:
         return self.visit_count ** (1.0 / self.temperature)

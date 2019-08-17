@@ -29,7 +29,7 @@ if __name__ == '__main__':
     parser.add_argument('--model', type=str, help='path to model', default=latest_model_path())
     parser.add_argument('--exploration', type=float, help='exploration constant during tree search', default=1.0)
     parser.add_argument('--temperature', type=float, help='temperature for selecting best action', default=1.0)
-    parser.add_argument('--budget', type=int, help='number of milliseconds of tree search per turn', default=5000)
+    parser.add_argument('--budget', type=int, help='number of milliseconds of tree search per turn', default=500)
     parser.add_argument('-n', type=int, help='number of games to play', default=1)
 
     args = parser.parse_args()

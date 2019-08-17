@@ -3,6 +3,7 @@ from abc import ABCMeta, abstractmethod
 from operator import itemgetter
 from random import choice
 
+import numpy as np
 from keras.engine.saving import load_model
 
 from analyzer import player_value
@@ -109,13 +110,18 @@ class MonteCarloPlayer(Player):
 
 class AlphaConnectPlayer(Player):
     def __init__(self, name: str, model_path, exploration=1.0, temperature=1.0, budget=1000):
-        self.model = load_model(model_path)
+        self.load_model(model_path)
         self.root = AlphaConnectNode(State.empty(), self.model, c_puct=exploration, temperature=temperature)
         self.exploration = exploration
         self.temperature = temperature
         self.budget = budget
         self.policy_history = []
         super().__init__(name)
+
+    def load_model(self, model_path):
+        self.model = load_model(model_path)
+        # first prediction takes more time
+        self.model.predict(np.array([State.empty().to_numpy()]))
 
     def decide(self, state: State):
         t0 = time.time()

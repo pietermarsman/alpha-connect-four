@@ -15,13 +15,17 @@ MODEL_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'model
 DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
 
 
-def fit_model(n_games=1000, samples_per_game=5):
+def fit_model(n_games=1000, samples_per_game=5, fit=True):
     output_path = new_model_path()
-    x_state, y_policy, y_reward = read_data(n_games, samples_per_game)
-
-    model = create_model(x_state.shape[-1], 10)
+    input_shape = State.empty().to_numpy().shape[-1]
+    model = create_model(input_shape, 10)
     print(model.summary())
-    model.fit(x_state, [y_policy, y_reward], epochs=100, validation_split=0.3, callbacks=[EarlyStopping(patience=2)])
+
+    if fit:
+        x_state, y_policy, y_reward = read_data(n_games, samples_per_game)
+        model.fit(x_state, [y_policy, y_reward], epochs=100, validation_split=0.3,
+                  callbacks=[EarlyStopping(patience=2)])
+
     model.save(output_path)
 
 
@@ -97,6 +101,7 @@ def create_model(input_size, kernel_size, c=10 ** -4):
     pool5 = connect_layer(pool4, kernel_size, l2)
     collapse = MaxPooling3D((1, 1, 4), 1)(pool5)
     flatten = Flatten()(collapse)
+    # todo add some layers for the two output heads
     output_play = Dense(16, activation='softmax')(flatten)
     output_win = Dense(1, activation='tanh')(flatten)
 
@@ -147,4 +152,4 @@ def pool_direction(conv, kernel_size, direction):
 
 if __name__ == '__main__':
     # todo move to argparse in __main__.py
-    fit_model()
+    fit_model(fit=False)

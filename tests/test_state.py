@@ -1,7 +1,9 @@
 from itertools import product
 
+import numpy as np
+
 from state import State, Color, FOUR, _lines_on_one_axis, _lines_on_one_diagonal, \
-    _lines_on_two_diagonals, Action, _lines
+    _lines_on_two_diagonals, Action, _lines, Augmentation, Rotation, Position
 
 
 def test_all_actions_are_possible_in_empty_state():
@@ -89,3 +91,60 @@ def test_winner_on_diagonal_line_along_side():
 def test_action_to_int():
     action = Action(2, 3)
     assert action == Action.from_int(action.to_int())
+
+
+def test_rotating_four_quarters_is_same():
+    old_action = Action(1, 3)
+    action = old_action
+    for _ in range(4):
+        action = action.augment(Augmentation(Rotation.QUARTER, False, False))
+
+    assert old_action == action
+
+
+def test_flipping_twice_is_same():
+    old_action = Action(0, 0)
+    action = old_action
+    action = action.augment(Augmentation(Rotation.NO, True, False))
+    action = action.augment(Augmentation(Rotation.NO, True, False))
+    assert old_action == action
+
+
+def test_state_to_numpy_without_augmentation():
+    state = State.empty()
+    state = state.take_action(Action(0, 0))
+    state = state.take_action(Action(0, 1))
+
+    arr = state.to_numpy()
+    expected_white = np.zeros((4, 4)).astype(bool)
+    expected_white[0, 0] = True
+    expected_black = np.zeros((4, 4)).astype(bool)
+    expected_black[0, 1] = True
+
+    assert expected_white.tolist() == arr[:, :, 0, 0].tolist()
+    assert expected_black.tolist() == arr[:, :, 0, 1].tolist()
+
+
+def test_state_to_numpy_with_quarter_rotation():
+    state = State.empty()
+    state = state.take_action(Action(0, 0))
+    arr = state.to_numpy(Augmentation(Rotation.QUARTER, False, False))
+
+    expected = np.zeros((4, 4)).astype(bool)
+    expected[3, 0] = True
+    assert expected.tolist() == arr[:, :, 0, 1].tolist()
+
+
+def test_state_to_numpy_with_three_quarter_rotation_and_x_flip():
+    state = State.empty()
+    state = state.take_action(Action(0, 0))
+    arr = state.to_numpy(Augmentation(Rotation.THREE_QUARTER, True, False))
+
+    expected = np.zeros((4, 4)).astype(bool)
+    expected[3, 3] = True
+    assert expected.tolist() == arr[:, :, 0, 1].tolist()
+
+
+def test_position_rotation():
+    position = Position(0, 3, 4).augment(Augmentation(Rotation.HALF, False, False))
+    assert Position(3, 0, 4) == position

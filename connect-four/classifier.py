@@ -9,7 +9,7 @@ from keras.layers import Dense, Conv3D, Flatten, AveragePooling3D, Maximum, Resh
     RepeatVector, Permute, BatchNormalization, Activation, Add
 from keras.optimizers import Adam
 
-from state import State, FOUR, Action, Color
+from state import State, FOUR, Action, Color, Augmentation
 
 MODEL_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'models'))
 DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
@@ -28,41 +28,35 @@ def read_data(n_games, n_samples_per_game):
     game_names = list(sorted([f for f in files if f.endswith('.json')]))
     game_names = game_names[-n_games:]
 
-    states = []
-    actions = []
-    policies = []
-    rewards = []
+    x = []
+    y_policy = []
+    y_reward = []
 
     for game_name in game_names:
         game_path = os.path.join(DATA_DIR, game_name)
         with open(game_path, 'r') as fin:
             game = json.load(fin)
 
+        actions = [Action.from_hex(action_hex) for action_hex in game['actions']]
+        states = []
         state = State.empty()
-        game_states = []
-        game_states.append(state)
-
-        for action_hex, sparse_policy in zip(game['actions'], game['policies']):
-            action = Action.from_hex(action_hex)
-            actions.append(action)
+        for action in actions:
             state = state.take_action(action)
-            policy = [sparse_policy.get(action.to_hex(), 0.0) for action in Action.iter_actions()]
-            policies.append(policy)
-            game_states.append(state)
+            states.append(state)
+        states, final_state = states[:-1], states[-1]
+        policies = game['policies']
 
-        for game_state in game_states[:-1]:
-            states.append(game_state)
-            rewards.append(_encode_winner(state.winner, game_state))
+        game_samples = sample(list(range(len(states))), 8)
 
-    # todo sample 8 states per game and augment
-    data = sample(list(zip(states, policies, rewards)), len(game_names) * n_samples_per_game)
-    x = []
-    y_policy = []
-    y_reward = []
-    for state, policy, reward in data:
-        x.append(state.to_numpy())
-        y_policy.append(policy)
-        y_reward.append(reward)
+        for augmentation, i in zip(Augmentation.iter_augmentations(), game_samples):
+            state = states[i]
+            sparse_policy = policies[i]
+
+            x.append(state.to_numpy(augmentation))
+            policy_index = sorted([(action.augment(augmentation).to_int(), action.to_hex())
+                                   for action in Action.iter_actions()])
+            y_policy.append([sparse_policy.get(action_hex, 0.0) for _, action_hex in policy_index])
+            y_reward.append(_encode_winner(final_state.winner, state))
 
     return np.array(x), np.array(y_policy), np.array(y_reward)
 
@@ -101,7 +95,7 @@ def create_model(input_size, filters, c=10 ** -4):
 
     model = Model(inputs=input, outputs=[output_play, output_win])
     optimizer = Adam()
-    metics = {'dense_1': 'categorical_accuracy', 'dense_2': 'mae'}
+    metics = {'dense_1': 'categorical_accuracy', 'dense_3': 'mae'}
     model.compile(optimizer, ['categorical_crossentropy', 'mse'], metrics=metics)
     return model
 

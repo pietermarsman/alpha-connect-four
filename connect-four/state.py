@@ -76,6 +76,37 @@ class Color(Enum):
             return 'w'
 
 
+class Rotation(Enum):
+    NO = 0
+    QUARTER = 1
+    HALF = 2
+    THREE_QUARTER = 3
+
+    @classmethod
+    def iter_rotations(cls):
+        yield from [Rotation.NO, Rotation.QUARTER, Rotation.HALF, Rotation.THREE_QUARTER]
+
+
+_Augmentation = NamedTuple('Augmentation', [
+    ('rotation', Rotation),
+    ('flip_x', bool),
+    ('flip_y', bool)
+])
+
+
+class Augmentation(_Augmentation):
+    @classmethod
+    def identity(cls):
+        return Augmentation(Rotation.NO, False, False)
+
+    @classmethod
+    def iter_augmentations(cls):
+        for rotation in Rotation.iter_rotations():
+            for flip_x in [False, True]:
+                for flip_y in [False, True]:
+                    yield Augmentation(rotation, flip_x, flip_y)
+
+
 _Action = namedtuple('Action', ['x', 'y'])
 
 
@@ -104,6 +135,22 @@ class Action(_Action):
     def __str__(self):
         return self.to_hex()
 
+    def augment(self, augmentation: Augmentation) -> 'Action':
+        x, y = self.x, self.y
+
+        for _ in range(augmentation.rotation.value):
+            temp_y = y
+            y = x
+            x = FOUR - 1 - temp_y
+
+        if augmentation.flip_x:
+            x = FOUR - 1 - x
+
+        if augmentation.flip_y:
+            y = FOUR - 1 - y
+
+        return Action(x, y)
+
 
 _Position = namedtuple('Position', ['x', 'y', 'z'])
 
@@ -113,6 +160,10 @@ class Position(_Position):
     def iter_positions(cls):
         for x, y, z in product(range(FOUR), range(FOUR), range(FOUR)):
             yield Position(x, y, z)
+
+    def augment(self, augmentation: Augmentation) -> 'Position':
+        action = self.to_action().augment(augmentation)
+        return Position(action.x, action.y, self.z)
 
     @classmethod
     def from_action_and_height(cls, action: Action, height: int):
@@ -205,8 +256,14 @@ class State(_State):
     def has_winner(self):
         return self.winner is not None
 
-    def to_numpy(self, batch=False):
-        arr = [[[self._encode_position(Position(x, y, z)) for z in range(FOUR)] for y in range(FOUR)]
+    def to_numpy(self, augmentation: Augmentation = None, batch=False):
+        if augmentation is None:
+            augmentation = Augmentation.identity()
+
+        mapping = {position.augment(augmentation): position for position in Position.iter_positions()}
+        arr = [[[self._encode_position(mapping[Position(x, y, z)])
+                 for z in range(FOUR)]
+                for y in range(FOUR)]
                for x in range(FOUR)]
         if batch:
             arr = np.array([arr, ])

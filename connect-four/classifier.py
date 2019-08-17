@@ -5,7 +5,7 @@ from random import sample
 import numpy as np
 from keras import Input, Model, regularizers
 from keras.callbacks import EarlyStopping
-from keras.layers import Dense, Conv3D, Flatten, AveragePooling3D, MaxPooling3D, Maximum, Reshape, \
+from keras.layers import Dense, Conv3D, Flatten, AveragePooling3D, Maximum, Reshape, \
     RepeatVector, Permute, BatchNormalization, Activation, Add
 from keras.optimizers import Adam
 
@@ -13,20 +13,6 @@ from state import State, FOUR, Action, Color
 
 MODEL_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'models'))
 DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
-
-
-def fit_model(n_games=1000, samples_per_game=5, fit=True):
-    output_path = new_model_path()
-    input_shape = State.empty().to_numpy().shape[-1]
-    model = create_model(input_shape, 10)
-    print(model.summary())
-
-    if fit:
-        x_state, y_policy, y_reward = read_data(n_games, samples_per_game)
-        model.fit(x_state, [y_policy, y_reward], epochs=100, validation_split=0.3,
-                  callbacks=[EarlyStopping(patience=2)])
-
-    model.save(output_path)
 
 
 def new_model_path():
@@ -90,20 +76,28 @@ def _encode_winner(winner: Color, state: State):
         return 0.0
 
 
-def create_model(input_size, kernel_size, c=10 ** -4):
+def create_model(input_size, filters, c=10 ** -4):
     l2 = regularizers.l2(c)
     input = Input(shape=(FOUR, FOUR, FOUR, input_size))
-    input_conv = Conv3D(kernel_size, 1, kernel_regularizer=l2)(input)
-    pool1 = connect_layer(input_conv, kernel_size, l2)
-    pool2 = connect_layer(pool1, kernel_size, l2)
-    pool3 = connect_layer(pool2, kernel_size, l2)
-    pool4 = connect_layer(pool3, kernel_size, l2)
-    pool5 = connect_layer(pool4, kernel_size, l2)
-    collapse = MaxPooling3D((1, 1, 4), 1)(pool5)
-    flatten = Flatten()(collapse)
-    # todo add some layers for the two output heads
+    input_conv = Conv3D(filters, 1, kernel_regularizer=l2)(input)
+    pool1 = connect_layer(input_conv, filters, l2)
+    pool2 = connect_layer(pool1, filters, l2)
+    pool3 = connect_layer(pool2, filters, l2)
+    pool4 = connect_layer(pool3, filters, l2)
+    pool5 = connect_layer(pool4, filters, l2)
+
+    collapse_action = Conv3D(2, (1, 1, 4), kernel_regularizer=l2)(pool5)
+    norm_action = BatchNormalization()(collapse_action)
+    activation_action = Activation('relu')(norm_action)
+    flatten = Flatten()(activation_action)
     output_play = Dense(16, activation='softmax')(flatten)
-    output_win = Dense(1, activation='tanh')(flatten)
+
+    collapse_win = Conv3D(1, (1, 1, 4), kernel_regularizer=l2)(pool5)
+    norm_win = BatchNormalization()(collapse_win)
+    activation_win = Activation('relu')(norm_win)
+    flatten_win = Flatten()(activation_win)
+    dense_win = Dense(filters * 2, activation='relu', kernel_regularizer=l2)(flatten_win)
+    output_win = Dense(1, activation='tanh', kernel_regularizer=l2)(dense_win)
 
     model = Model(inputs=input, outputs=[output_play, output_win])
     optimizer = Adam()
@@ -112,12 +106,12 @@ def create_model(input_size, kernel_size, c=10 ** -4):
     return model
 
 
-def connect_layer(input, kernel_size, l2):
+def connect_layer(input, filters, l2):
     """Residual layer modeled after AlphaGo"""
-    pool1 = line_convolution(input, kernel_size, l2)
+    pool1 = line_convolution(input, filters, l2)
     norm1 = BatchNormalization()(pool1)
     relu1 = Activation('relu')(norm1)
-    pool2 = line_convolution(relu1, kernel_size, l2)
+    pool2 = line_convolution(relu1, filters, l2)
     norm2 = BatchNormalization()(pool2)
     add = Add()([input, norm2])
     relu2 = Activation('relu')(add)
@@ -125,17 +119,17 @@ def connect_layer(input, kernel_size, l2):
     return relu2
 
 
-def line_convolution(input, kernel_size, l2):
+def line_convolution(input, filters, l2):
     # todo add diagonal connection
-    conv1 = Conv3D(kernel_size, 1, kernel_regularizer=l2)(input)
-    permute_x1 = pool_direction(conv1, kernel_size, 0)
-    permute_y1 = pool_direction(conv1, kernel_size, 1)
-    permute_z1 = pool_direction(conv1, kernel_size, 2)
+    conv1 = Conv3D(filters, 1, kernel_regularizer=l2)(input)
+    permute_x1 = pool_direction(conv1, filters, 0)
+    permute_y1 = pool_direction(conv1, filters, 1)
+    permute_z1 = pool_direction(conv1, filters, 2)
     pool1 = Maximum()([permute_x1, permute_y1, permute_z1])
     return pool1
 
 
-def pool_direction(conv, kernel_size, direction):
+def pool_direction(conv, filters, direction):
     pool_size = [1, 1, 1]
     pool_size[direction] = FOUR
 
@@ -143,13 +137,22 @@ def pool_direction(conv, kernel_size, direction):
     permute_dims.insert(0, permute_dims.pop(direction))
 
     pool = AveragePooling3D(pool_size, 1)(conv)
-    gather = Reshape((FOUR * FOUR * kernel_size,))(pool)
+    gather = Reshape((FOUR * FOUR * filters,))(pool)
     repeat = RepeatVector(FOUR)(gather)
-    spread = Reshape((FOUR, FOUR, FOUR, kernel_size))(repeat)
+    spread = Reshape((FOUR, FOUR, FOUR, filters))(repeat)
     permute = Permute(permute_dims)(spread)
     return permute
 
 
 if __name__ == '__main__':
     # todo move to argparse in __main__.py
-    fit_model(fit=False)
+    output_path = new_model_path()
+    input_shape = State.empty().to_numpy().shape[-1]
+    model = create_model(input_shape, filters=10)
+    print(model.summary())
+
+    x_state, y_policy, y_reward = read_data(1000, 3)
+    model.fit(x_state, [y_policy, y_reward], epochs=100, validation_split=0.3,
+              callbacks=[EarlyStopping(patience=2)])
+
+    model.save(output_path)

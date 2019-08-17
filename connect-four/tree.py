@@ -135,7 +135,7 @@ class AlphaConnectNode(object):
         self.children = {}  # type: Dict[Action, AlphaConnectNode]
         self.is_played = False
 
-        self.visit_count = 0
+        self.visit_count = 1
         self.total_value = 0
         self.action_prob = action_prob
 
@@ -155,9 +155,8 @@ class AlphaConnectNode(object):
             return self
 
     def puct(self):
-        visit_count = self.visit_count + 0.001
-        average_value = self.total_value / visit_count
-        exploration = self.action_prob * (math.sqrt(self.parent.visit_count) / (1 + visit_count))
+        average_value = self.total_value / self.visit_count
+        exploration = self.action_prob * (math.sqrt(self.parent.visit_count) / self.visit_count)
         return average_value + self.c_puct * exploration
 
     def expand_and_simulate(self):
@@ -175,6 +174,7 @@ class AlphaConnectNode(object):
         """Get value for next color and action probabilities"""
         if self.state.is_end_of_game():
             if self.state.winner == self.state.next_color:
+                # game is already done, previous player is winner so current player gets a reward of -1
                 state_value = -1.0
             elif self.state.winner == self.state.next_color.other():
                 state_value = 1.0
@@ -182,6 +182,7 @@ class AlphaConnectNode(object):
                 state_value = 0.0
             action_probs = None
         else:
+            # todo predict for multiple states in batches
             array = self.state.to_numpy(batch=True)
             pred_actions, pred_value = self.model.predict(array)
             state_value = pred_value.item()

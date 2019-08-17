@@ -34,6 +34,7 @@ class ConsolePlayer(Player):
         action = None
 
         while action is None:
+            # todo use new action names
             print('Possible actions:')
             for i, action in enumerate(actions):
                 print('%d. %s' % (i, action))
@@ -119,9 +120,10 @@ class AlphaConnectPlayer(Player):
     def decide(self, state: State):
         t0 = time.time()
         self.root = self.root.find_state(state)
-        self.root.parent = None
+        # todo add dirichlet noise to root action probabilities
         if self.root is None:
-            self.root = AlphaConnectNode(state, c_puct=self.exploration, temperature=self.temperature)
+            self.root = AlphaConnectNode(state, self.model, c_puct=self.exploration, temperature=self.temperature)
+        self.root.parent = None
         while time.time() - t0 < self.budget / 1000:
             self.root.search()
         self.save_policy()

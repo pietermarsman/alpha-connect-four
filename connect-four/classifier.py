@@ -9,6 +9,7 @@ from keras.layers import Dense, Conv3D, Flatten, AveragePooling3D, Maximum, Resh
     RepeatVector, Permute, BatchNormalization, Activation, Add
 from keras.optimizers import Adam
 
+from observer import AlphaConnectGame
 from state import State, FOUR, Action, Color, Augmentation
 
 MODEL_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'models'))
@@ -23,7 +24,7 @@ def new_model_path():
     return output_path
 
 
-def read_data(n_games, n_samples_per_game):
+def read_data(n_games):
     files = os.listdir(DATA_DIR)
     game_names = list(sorted([f for f in files if f.endswith('.json')]))
     game_names = game_names[-n_games:]
@@ -35,28 +36,24 @@ def read_data(n_games, n_samples_per_game):
     for game_name in game_names:
         game_path = os.path.join(DATA_DIR, game_name)
         with open(game_path, 'r') as fin:
-            game = json.load(fin)
+            game_data = json.load(fin)
 
-        actions = [Action.from_hex(action_hex) for action_hex in game['actions']]
+        winner, starter, actions, policies = AlphaConnectGame.deserialize(game_data)
+
         states = []
         state = State.empty()
         for action in actions:
             state = state.take_action(action)
             states.append(state)
         states, final_state = states[:-1], states[-1]
-        policies = game['policies']
 
         game_samples = sample(list(range(len(states))), 8)
-
         for augmentation, i in zip(Augmentation.iter_augmentations(), game_samples):
-            state = states[i]
-            sparse_policy = policies[i]
+            augmentend_action_order = sorted(Action.iter_actions(), key=lambda a: a.augment(augmentation).to_int())
 
-            x.append(state.to_numpy(augmentation))
-            policy_index = sorted([(action.augment(augmentation).to_int(), action.to_hex())
-                                   for action in Action.iter_actions()])
-            y_policy.append([sparse_policy.get(action_hex, 0.0) for _, action_hex in policy_index])
-            y_reward.append(_encode_winner(final_state.winner, state))
+            x.append(states[i].to_numpy(augmentation))
+            y_policy.append([policies[i].get(action, 0.0) for action in augmentend_action_order])
+            y_reward.append(_encode_winner(final_state.winner, states[i]))
 
     return np.array(x), np.array(y_policy), np.array(y_reward)
 
@@ -145,7 +142,7 @@ if __name__ == '__main__':
     model = create_model(input_shape, filters=10)
     print(model.summary())
 
-    x_state, y_policy, y_reward = read_data(1000, 3)
+    x_state, y_policy, y_reward = read_data(1000)
     model.fit(x_state, [y_policy, y_reward], epochs=100, validation_split=0.3,
               callbacks=[EarlyStopping(patience=2)])
 

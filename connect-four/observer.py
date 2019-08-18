@@ -1,7 +1,7 @@
 import datetime
 import json
 import os
-from typing import Tuple, NamedTuple, List, Dict
+from typing import Tuple, List, Dict
 
 from game import TwoPlayerGame
 from player import Player, AlphaConnectPlayer
@@ -42,35 +42,10 @@ class ConsoleObserver(Observer):
                 print('The game is a draw')
 
 
-_AlphaConnectGame = NamedTuple('AlphaConnectGame', [
-    ('winner', int),
-    ('starter', int),
-    ('actions', str),
-    ('policies', List[Dict[str, float]])
-])
-
-
-class AlphaConnectGame(_AlphaConnectGame):
-    @classmethod
-    def serializer(cls, game: TwoPlayerGame) -> 'AlphaConnectGame':
-        winner_color = game.current_state.winner
-        first_color = game.state_history[0].next_color
-        actions = ''.join([hex(action[0] * FOUR + action[1])[2:] for action in game.action_history])
-        policy_history = game.players[Color.WHITE].policy_history
-        policies = [{action.to_hex(): value for action, value in policy.items()} for policy in policy_history]
-        return cls(winner_color, first_color, actions, policies)
-
-    @staticmethod
-    def deserialize(data) -> Tuple[Color, Color, List[Action], List[Dict[Action, float]]]:
-        winner = Color(data['winner'])
-        starter = Color(data['starter'])
-        actions = [Action.from_hex(action_hex) for action_hex in data['actions']]
-        policies = [{Action.from_hex(action_hex): value for action_hex, value in policy.items()}
-                    for policy in data['policies']]
-        return winner, starter, actions, policies
-
-
 class AlphaConnectSerializer(Observer):
+    def __init__(self, data_dir: str):
+        self.data_dir = data_dir
+
     def notify_end_game(self, game: TwoPlayerGame):
         if self.is_self_play(game):
             self.save_game(game)
@@ -80,12 +55,28 @@ class AlphaConnectSerializer(Observer):
         player2 = game.players[Color.BROWN]
         return isinstance(player1, AlphaConnectPlayer) and player1 is player2
 
-    @staticmethod
-    def save_game(game):
-        data = AlphaConnectGame.serializer(game)
-        # todo use model iteration
-        path = 'data/{date:%Y%m%d_%H%M%S}.json'.format(date=datetime.datetime.now())
-        os.makedirs(os.path.dirname(path), exist_ok=True)
+    def save_game(self, game):
+        data = self.serializer(game)
+        os.makedirs(os.path.dirname(self.data_dir), exist_ok=True)
+        path = os.path.join(self.data_dir, '{date:%Y%m%d_%H%M%S_%f}.json'.format(date=datetime.datetime.now()))
         with open(path, 'w') as fout:
-            json.dump(data, fout, indent=4)
+            json.dump(data, fout)
         print('Written game to: %s' % path)
+
+    @staticmethod
+    def serializer(game: TwoPlayerGame) -> Dict:
+        winner_color = game.current_state.winner.value
+        first_color = game.state_history[0].next_color.value
+        actions = ''.join([hex(action[0] * FOUR + action[1])[2:] for action in game.action_history])
+        policy_history = game.players[Color.WHITE].policy_history
+        policies = [{action.to_hex(): value for action, value in policy.items()} for policy in policy_history]
+        return {'winner': winner_color, 'starter': first_color, 'actions': actions, 'policies': policies}
+
+    @staticmethod
+    def deserialize(data) -> Tuple[Color, Color, List[Action], List[Dict[Action, float]]]:
+        winner = Color(data['winner'])
+        starter = Color(data['starter'])
+        actions = [Action.from_hex(action_hex) for action_hex in data['actions']]
+        policies = [{Action.from_hex(action_hex): value for action_hex, value in policy.items()}
+                    for policy in data['policies']]
+        return winner, starter, actions, policies

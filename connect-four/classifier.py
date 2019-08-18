@@ -9,36 +9,40 @@ from keras.layers import Dense, Conv3D, Flatten, AveragePooling3D, Maximum, Resh
     RepeatVector, Permute, BatchNormalization, Activation, Add
 from keras.optimizers import Adam
 
-from observer import AlphaConnectGame
+from observer import AlphaConnectSerializer
 from state import State, FOUR, Action, Color, Augmentation
 
-MODEL_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'models'))
-DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
+
+def train_new_model(data_path, output_path):
+    input_shape = State.empty().to_numpy().shape[-1]
+    model = create_model(input_shape, filters=10)
+
+    if data_path is not None:
+        x_state, y_policy, y_reward = read_data(data_path)
+        model.fit(x_state, [y_policy, y_reward], epochs=100, validation_split=0.3,
+                  callbacks=[EarlyStopping(patience=2)])
+
+    model.save(output_path)
+    return model
 
 
-def new_model_path():
-    files = os.listdir(MODEL_DIR)
-    model_files = [f for f in files if f.endswith('h5')]
-    model_iteration = len(model_files)
-    output_path = os.path.abspath(os.path.join(MODEL_DIR, '%6.6d.h5' % model_iteration))
-    return output_path
-
-
-def read_data(n_games):
-    files = os.listdir(DATA_DIR)
+def read_data(data_path, n_games=None):
+    files = os.listdir(data_path)
     game_names = list(sorted([f for f in files if f.endswith('.json')]))
-    game_names = game_names[-n_games:]
+
+    if n_games is not None:
+        game_names = game_names[-n_games:]
 
     x = []
     y_policy = []
     y_reward = []
 
     for game_name in game_names:
-        game_path = os.path.join(DATA_DIR, game_name)
+        game_path = os.path.join(data_path, game_name)
         with open(game_path, 'r') as fin:
             game_data = json.load(fin)
 
-        winner, starter, actions, policies = AlphaConnectGame.deserialize(game_data)
+        winner, starter, actions, policies = AlphaConnectSerializer.deserialize(game_data)
 
         states = []
         state = State.empty()
@@ -133,17 +137,3 @@ def pool_direction(conv, filters, direction):
     spread = Reshape((FOUR, FOUR, FOUR, filters))(repeat)
     permute = Permute(permute_dims)(spread)
     return permute
-
-
-if __name__ == '__main__':
-    # todo move to argparse in __main__.py
-    output_path = new_model_path()
-    input_shape = State.empty().to_numpy().shape[-1]
-    model = create_model(input_shape, filters=10)
-    print(model.summary())
-
-    x_state, y_policy, y_reward = read_data(1000)
-    model.fit(x_state, [y_policy, y_reward], epochs=100, validation_split=0.3,
-              callbacks=[EarlyStopping(patience=2)])
-
-    model.save(output_path)

@@ -21,8 +21,8 @@ def train_new_model(data_path, output_path):
 
     if data_path is not None:
         x_state, y_policy, y_reward = read_data(data_path)
-        model.fit(x_state, [y_policy, y_reward], epochs=100, validation_split=0.3,
-                  callbacks=[EarlyStopping(patience=2)])
+        model.fit(x_state, [y_policy, y_reward], epochs=100, validation_split=0.3, batch_size=16,
+                  callbacks=[EarlyStopping(patience=5)])
 
     model.save(output_path)
     return model
@@ -74,26 +74,23 @@ def _encode_winner(winner: Color, state: State):
         return 0.0
 
 
-def create_model(input_size, filters, c=10 ** -4):
+def create_model(input_size, filters, c=10 ** -4, initialization='he_normal'):
     l2 = regularizers.l2(c)
     input = Input(shape=(FOUR, FOUR, FOUR, input_size))
-    input_conv = Conv3D(filters, 1, kernel_regularizer=l2)(input)
-    pool1 = connect_layer(input_conv, filters, l2)
-    pool2 = connect_layer(pool1, filters, l2)
-    pool3 = connect_layer(pool2, filters, l2)
-    pool4 = connect_layer(pool3, filters, l2)
-    pool5 = connect_layer(pool4, filters, l2)
+    input_conv = Conv3D(filters, 1, kernel_regularizer=l2, activation='relu', kernel_initializer=initialization)(input)
+    pool1 = connect_layer(input_conv, filters, l2, initialization)
+    pool2 = connect_layer(pool1, filters, l2, initialization)
 
-    collapse_action = Conv3D(2, (1, 1, 4), kernel_regularizer=l2)(pool5)
+    collapse_action = Conv3D(2, (1, 1, 4), kernel_regularizer=l2, kernel_initializer=initialization)(pool2)
     norm_action = BatchNormalization()(collapse_action)
     activation_action = Activation('relu')(norm_action)
     flatten = Flatten()(activation_action)
 
-    collapse_win = Conv3D(1, (1, 1, 4), kernel_regularizer=l2)(pool5)
+    collapse_win = Conv3D(1, (1, 1, 4), kernel_regularizer=l2, kernel_initializer=initialization)(pool2)
     norm_win = BatchNormalization()(collapse_win)
     activation_win = Activation('relu')(norm_win)
     flatten_win = Flatten()(activation_win)
-    dense_win = Dense(filters * 2, activation='relu', kernel_regularizer=l2)(flatten_win)
+    dense_win = Dense(filters, activation='relu', kernel_regularizer=l2, kernel_initializer=initialization)(flatten_win)
 
     output_play = Dense(16, activation='softmax')(flatten)
     output_win = Dense(1, activation='tanh', kernel_regularizer=l2)(dense_win)
@@ -105,12 +102,12 @@ def create_model(input_size, filters, c=10 ** -4):
     return model
 
 
-def connect_layer(input, filters, l2):
+def connect_layer(input, filters, l2, initialization):
     """Residual layer modeled after AlphaGo"""
-    pool1 = line_convolution(input, filters, l2)
+    pool1 = line_convolution(input, filters, l2, initialization)
     norm1 = BatchNormalization()(pool1)
     relu1 = Activation('relu')(norm1)
-    pool2 = line_convolution(relu1, filters, l2)
+    pool2 = line_convolution(relu1, filters, l2, initialization)
     norm2 = BatchNormalization()(pool2)
     add = Add()([input, norm2])
     relu2 = Activation('relu')(add)
@@ -118,9 +115,9 @@ def connect_layer(input, filters, l2):
     return relu2
 
 
-def line_convolution(input, filters, l2):
+def line_convolution(input, filters, l2, initializaiton):
     # todo add diagonal connection
-    conv1 = Conv3D(filters, 1, kernel_regularizer=l2)(input)
+    conv1 = Conv3D(filters, 1, kernel_regularizer=l2, kernel_initializer=initializaiton)(input)
     permute_x1 = pool_direction(conv1, filters, 0)
     permute_y1 = pool_direction(conv1, filters, 1)
     permute_z1 = pool_direction(conv1, filters, 2)

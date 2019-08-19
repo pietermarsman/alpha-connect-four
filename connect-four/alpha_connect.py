@@ -1,4 +1,5 @@
 import os
+from multiprocessing.pool import Pool
 
 from classifier import train_new_model
 from game import TwoPlayerGame
@@ -11,7 +12,7 @@ MODEL_DIR = os.path.join(_ROOT_DIR, 'models')
 DATA_DIR = os.path.join(_ROOT_DIR, 'data')
 
 
-def optimize(rounds, games_per_round):
+def optimize(rounds, games_per_round, processes):
     if is_first_model(MODEL_DIR):
         model_iteration, model_path = new_model_path(MODEL_DIR)
         train_new_model(None, model_path)
@@ -21,7 +22,7 @@ def optimize(rounds, games_per_round):
     for _ in range(rounds):
         data_dir = os.path.join(DATA_DIR, '%6.6d' % model_iteration)
         os.makedirs(data_dir, exist_ok=True)
-        simulate(model_path, games_per_round, data_dir)
+        simulate(model_path, games_per_round, data_dir, processes=processes)
 
         model_iteration, model_path = new_model_path(MODEL_DIR)
         train_new_model(data_dir, model_path)
@@ -39,16 +40,21 @@ def latest_model_path(model_dir):
     return model_iteration - 1, model_path
 
 
-def simulate(model_path, n, data_dir, exploration=1.0, temperature=1.0, budget=2000, verbose=False):
-    while count_games(data_dir) < n:
-        # todo use multiple processes
-        state = State.empty()
-        player_name = 'AlphaConnect (%s)' % model_path.split('/')[-1]
-        player = AlphaConnectPlayer(player_name, model_path, exploration, temperature, budget)
-        observers = [ConsoleObserver(verbose, verbose), AlphaConnectSerializer(data_dir)]
-        game = TwoPlayerGame(state, player, player, observers)
-        game.play()
-        player.clear_session()
+def simulate(model_path, n, data_dir, processes=1):
+    n_games = n - count_games(data_dir)
+    with Pool(processes) as p:
+        jobs = [(model_path, data_dir) for _ in range(n_games)]
+        p.starmap(simulate_once, jobs)
+
+
+def simulate_once(model_path, data_dir, exploration=1.0, temperature=1.0, budget=2000, verbose=False):
+    state = State.empty()
+    player_name = 'AlphaConnect (%s)' % model_path.split('/')[-1]
+    player = AlphaConnectPlayer(player_name, model_path, exploration, temperature, budget)
+    observers = [ConsoleObserver(verbose, verbose), AlphaConnectSerializer(data_dir)]
+    game = TwoPlayerGame(state, player, player, observers)
+    game.play()
+    player.clear_session()
 
 
 def count_games(data_dir):

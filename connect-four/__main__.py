@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 
-from alpha_connect import simulate, optimize
+from alpha_connect import optimize, simulate_once
 from classifier import train_new_model
 from game import TwoPlayerGame
 from observer import ConsoleObserver
@@ -24,11 +24,11 @@ def train_model(args):
 
 
 def simulate_alpha_connect_game(args):
-    simulate(args.model_path, args.n, args.data_path)
+    simulate_once(args.model_path, args.data_path)
 
 
 def optimize_alpha_connect(args):
-    optimize(args.rounds, args.games)
+    optimize(args.rounds, args.games, args.processes)
 
 
 parser = ArgumentParser(description='A game of connect four in three dimensions')
@@ -51,6 +51,7 @@ parser_simulate.set_defaults(func=simulate_alpha_connect_game)
 parser_optimize = subparsers.add_parser('optimize', help='iteratively optimize neural network by self-play')
 parser_optimize.add_argument('--rounds', type=int, help='number of games to play', default=1)
 parser_optimize.add_argument('--games', type=int, help='number of games to play', default=2500)
+parser_optimize.add_argument('--processes', type=int, help='number of cores to use', default=7)
 parser_optimize.set_defaults(func=optimize_alpha_connect)
 
 args = parser.parse_args()

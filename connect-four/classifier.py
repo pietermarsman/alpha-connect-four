@@ -44,14 +44,15 @@ def read_data(data_path, n_games=None):
 
         winner, starter, actions, policies = AlphaConnectSerializer.deserialize(game_data)
 
-        states = []
         state = State.empty()
+        states = [state]
         for action in actions:
             state = state.take_action(action)
             states.append(state)
         states, final_state = states[:-1], states[-1]
 
-        game_samples = sample(list(range(len(states))), 8)
+        n_samples = min(len(states), 8)
+        game_samples = sample(list(range(len(states))), n_samples)
         for augmentation, i in zip(Augmentation.iter_augmentations(), game_samples):
             augmentend_action_order = sorted(Action.iter_actions(), key=lambda a: a.augment(augmentation).to_int())
 

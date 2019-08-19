@@ -4,8 +4,8 @@ from operator import itemgetter
 from random import choice
 
 import numpy as np
-from keras import backend as K
-from keras.engine.saving import load_model
+from tensorflow.python.keras import backend as K
+from tensorflow.python.keras.engine.saving import load_model
 
 from analyzer import player_value
 from state import State, FOUR

@@ -3,11 +3,11 @@ import os
 from random import sample
 
 import numpy as np
-from keras import Input, Model, regularizers
-from keras.callbacks import EarlyStopping
-from keras.layers import Dense, Conv3D, Flatten, AveragePooling3D, Maximum, Reshape, \
+from tensorflow.python.keras import Input, Model, regularizers
+from tensorflow.python.keras.callbacks import EarlyStopping
+from tensorflow.python.keras.layers import Dense, Conv3D, Flatten, AveragePooling3D, Maximum, Reshape, \
     RepeatVector, Permute, BatchNormalization, Activation, Add
-from keras.optimizers import Adam
+from tensorflow.python.keras.optimizers import Adam
 
 from observer import AlphaConnectSerializer
 from state import State, FOUR, Action, Color, Augmentation

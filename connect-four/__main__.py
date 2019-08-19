@@ -43,7 +43,7 @@ parser_train.add_argument('model_path', help='path where to store the serialized
 parser_train.set_defaults(func=train_model)
 
 parser_simulate = subparsers.add_parser('simulate', help='simulate a new game played by a neural network')
-parser_train.add_argument('data_path', help='path to data from previous games')
+parser_simulate.add_argument('data_path', help='path to data from previous games')
 parser_simulate.add_argument('model_path', type=str, help='path to a serialized neural network')
 parser_simulate.add_argument('-n', type=int, help='number of games to play', default=1)
 parser_simulate.set_defaults(func=simulate_alpha_connect_game)

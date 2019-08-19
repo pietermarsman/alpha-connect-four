@@ -8,6 +8,7 @@ from tensorflow.python.keras.callbacks import EarlyStopping
 from tensorflow.python.keras.layers import Dense, Conv3D, Flatten, AveragePooling3D, Maximum, Reshape, \
     RepeatVector, Permute, BatchNormalization, Activation, Add
 from tensorflow.python.keras.optimizers import Adam
+from tqdm import tqdm
 
 from observer import AlphaConnectSerializer
 from state import State, FOUR, Action, Color, Augmentation
@@ -16,6 +17,7 @@ from state import State, FOUR, Action, Color, Augmentation
 def train_new_model(data_path, output_path):
     input_shape = State.empty().to_numpy().shape[-1]
     model = create_model(input_shape, filters=10)
+    print(model.summary())
 
     if data_path is not None:
         x_state, y_policy, y_reward = read_data(data_path)
@@ -37,7 +39,7 @@ def read_data(data_path, n_games=None):
     y_policy = []
     y_reward = []
 
-    for game_name in game_names:
+    for game_name in tqdm(game_names):
         game_path = os.path.join(data_path, game_name)
         with open(game_path, 'r') as fin:
             game_data = json.load(fin)
@@ -86,18 +88,19 @@ def create_model(input_size, filters, c=10 ** -4):
     norm_action = BatchNormalization()(collapse_action)
     activation_action = Activation('relu')(norm_action)
     flatten = Flatten()(activation_action)
-    output_play = Dense(16, activation='softmax')(flatten)
 
     collapse_win = Conv3D(1, (1, 1, 4), kernel_regularizer=l2)(pool5)
     norm_win = BatchNormalization()(collapse_win)
     activation_win = Activation('relu')(norm_win)
     flatten_win = Flatten()(activation_win)
     dense_win = Dense(filters * 2, activation='relu', kernel_regularizer=l2)(flatten_win)
+
+    output_play = Dense(16, activation='softmax')(flatten)
     output_win = Dense(1, activation='tanh', kernel_regularizer=l2)(dense_win)
 
     model = Model(inputs=input, outputs=[output_play, output_win])
     optimizer = Adam()
-    metics = {'dense_1': 'categorical_accuracy', 'dense_3': 'mae'}
+    metics = {'dense_1': 'categorical_accuracy', 'dense_2': 'mae'}
     model.compile(optimizer, ['categorical_crossentropy', 'mse'], metrics=metics)
     return model
 

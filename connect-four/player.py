@@ -4,6 +4,7 @@ from operator import itemgetter
 from random import choice
 
 import numpy as np
+from keras import backend as K
 from keras.engine.saving import load_model
 
 from analyzer import player_value
@@ -110,7 +111,7 @@ class MonteCarloPlayer(Player):
 
 class AlphaConnectPlayer(Player):
     def __init__(self, name: str, model_path, exploration=1.0, temperature=1.0, budget=1000):
-        self.load_model(model_path)
+        self.model = self.load_model(model_path)
         self.root = AlphaConnectNode(State.empty(), self.model, c_puct=exploration, temperature=temperature)
         self.exploration = exploration
         self.temperature = temperature
@@ -118,10 +119,15 @@ class AlphaConnectPlayer(Player):
         self.policy_history = []
         super().__init__(name)
 
-    def load_model(self, model_path):
-        self.model = load_model(model_path)
+    @staticmethod
+    def load_model(model_path):
+        model = load_model(model_path)
         # first prediction takes more time
-        self.model.predict(np.array([State.empty().to_numpy()]))
+        model.predict(np.array([State.empty().to_numpy()]))
+        return model
+
+    def clear_session(self):
+        K.clear_session()
 
     def decide(self, state: State):
         t0 = time.time()

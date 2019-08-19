@@ -48,6 +48,7 @@ def simulate(model_path, n, data_dir, exploration=1.0, temperature=1.0, budget=2
         observers = [ConsoleObserver(verbose, verbose), AlphaConnectSerializer(data_dir)]
         game = TwoPlayerGame(state, player, player, observers)
         game.play()
+        player.clear_session()
 
 
 def count_games(data_dir):

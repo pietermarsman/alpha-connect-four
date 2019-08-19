@@ -28,7 +28,6 @@ def simulate_alpha_connect_game(args):
 
 
 def optimize_alpha_connect(args):
-    # todo this command has increased memory usage over time
     optimize(args.rounds, args.games)
 
 

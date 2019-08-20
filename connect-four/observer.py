@@ -57,8 +57,8 @@ class AlphaConnectSerializer(Observer):
 
     def save_game(self, game):
         data = self.serializer(game)
-        os.makedirs(os.path.dirname(self.data_dir), exist_ok=True)
         path = os.path.join(self.data_dir, '{date:%Y%m%d_%H%M%S_%f}.json'.format(date=datetime.datetime.now()))
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, 'w') as fout:
             json.dump(data, fout)
         print('Written game to: %s' % path)

@@ -45,7 +45,7 @@ def simulate_once_with_newest_model(directories):
 def simulate_once(model_path, data_dir, exploration=1.0, temperature=1.0, budget=2000, verbose=False):
     state = State.empty()
     player_name = 'AlphaConnect (%s)' % model_path.split('/')[-1]
-    player = AlphaConnectPlayer(player_name, model_path, exploration, temperature, budget)
+    player = AlphaConnectPlayer(player_name, model_path, exploration, temperature, search_budget=1600)
     observers = [AlphaConnectSerializer(data_dir)]
     if verbose:
         observers.append(ConsoleObserver())

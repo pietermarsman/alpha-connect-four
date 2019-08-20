@@ -8,7 +8,7 @@ from tensorflow.python.keras import backend as K
 from tensorflow.python.keras.engine.saving import load_model
 
 from analyzer import player_value
-from state import State, FOUR
+from state import State, FOUR, Action
 from tree import MiniMaxNode, MonteCarloNode, AlphaConnectNode
 
 
@@ -32,25 +32,17 @@ class Player(metaclass=ABCMeta):
 
 class ConsolePlayer(Player):
     def decide(self, state: State):
-        actions = list(sorted(state.allowed_actions))
-        action = None
-
-        while action is None:
-            # todo use new action names
-            print('Possible actions:')
-            for i, action in enumerate(actions):
-                print('%d. %s' % (i, action))
+        while True:
+            print('Possible actions:', ', '.join(map(str, sorted(state.allowed_actions))))
             user_input = input('Choose your action: ')
 
             try:
-                user_choice = int(user_input)
-                if user_choice < 0 or user_choice >= len(actions):
-                    raise ValueError
-                action = actions[user_choice]
+                action = Action.from_hex(user_input)
+                if action in state.allowed_actions:
+                    return action
+
             except ValueError:
                 pass
-
-        return action
 
 
 class RandomPlayer(Player):
@@ -110,12 +102,21 @@ class MonteCarloPlayer(Player):
 
 
 class AlphaConnectPlayer(Player):
-    def __init__(self, name: str, model_path, exploration=1.0, temperature=1.0, budget=1000):
+    def __init__(self, name: str, model_path, exploration=1.0, temperature=1.0, time_budget=None, search_budget=None):
         self.model = self.load_model(model_path)
         self.root = AlphaConnectNode(State.empty(), self.model, c_puct=exploration, temperature=temperature)
         self.exploration = exploration
         self.temperature = temperature
-        self.budget = budget
+
+        if time_budget is not None and search_budget is None:
+            self.budget_type = 'time'
+            self.budget = time_budget
+        elif time_budget is None and search_budget is not None:
+            self.budget_type = 'search'
+            self.budget = search_budget
+        else:
+            raise ValueError('Either time_budget xor search_budget should be None, but not both or neither')
+
         self.policy_history = []
         super().__init__(name)
 
@@ -136,9 +137,14 @@ class AlphaConnectPlayer(Player):
         if self.root is None:
             self.root = AlphaConnectNode(state, self.model, c_puct=self.exploration, temperature=self.temperature)
         self.root.parent = None
-        # todo add support for fixed number of searches instead of time-based
-        while time.time() - t0 < self.budget / 1000:
-            self.root.search()
+
+        if self.budget_type == 'time':
+            while time.time() - t0 < self.budget / 1000:
+                self.root.search()
+        else:
+            for _ in range(self.budget):
+                self.root.search()
+
         self.save_policy()
         action = self.root.sample_action()
         return action

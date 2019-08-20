@@ -1,6 +1,9 @@
 import math
 import random
-from typing import Dict, Union, List, Tuple
+from queue import Queue
+from typing import Dict, Union, List
+
+import numpy as np
 
 from analyzer import player_value
 from state import Action, State, Color
@@ -85,9 +88,6 @@ class MonteCarloNode(object):
         else:
             return self.white_wins
 
-    def unvisited_children(self) -> 'List[MonteCarloNode]':
-        return [child for child in self.children.values() if child.visit_count == 0]
-
     def expand(self) -> 'MonteCarloNode':
         self.is_played = True
         if not self.state.is_end_of_game():
@@ -97,6 +97,9 @@ class MonteCarloNode(object):
             return random.choice(self.unvisited_children())
         else:
             return self
+
+    def unvisited_children(self) -> 'List[MonteCarloNode]':
+        return [child for child in self.children.values() if child.visit_count == 0]
 
     def simulate(self) -> 'State':
         state = self.state
@@ -128,12 +131,16 @@ class MonteCarloNode(object):
 class AlphaConnectNode(object):
     def __init__(self, state: State, model, parent=None, action_prob=None, c_puct=1.0, temperature=1.0):
         self.state = state
+        if not isinstance(model, BatchEvaluator):
+            model = BatchEvaluator(model)
         self.model = model
         self.parent = parent  # type: Union[AlphaConnectNode, None]
         self.c_puct = c_puct
         self.temperature = temperature
         self.children = {}  # type: Dict[Action, AlphaConnectNode]
         self.is_played = False
+
+        self.evaluation_queue = Queue()
 
         self.visit_count = 1
         self.total_value = 0
@@ -145,10 +152,11 @@ class AlphaConnectNode(object):
 
     def search(self):
         selected_node = self.select()
-        value = selected_node.expand_and_simulate()
-        selected_node.propagate(value)
+        selected_node.expand()
+        selected_node.lazy_evaluate_and_backup()
 
     def select(self) -> 'AlphaConnectNode':
+
         if self.is_played and not self.state.is_end_of_game():
             child = max(self.children.values(), key=lambda c: c.puct())
             return child.select()
@@ -156,46 +164,33 @@ class AlphaConnectNode(object):
             return self
 
     def puct(self):
+        if self.parent is None:
+            return 0.0
+
         average_value = self.total_value / self.visit_count
         exploration = self.action_prob * (math.sqrt(self.parent.visit_count) / self.visit_count)
         return average_value + self.c_puct * exploration
 
-    def expand_and_simulate(self):
+    def expand(self):
         self.is_played = True
-        state_value, action_probs = self.simulate()
         if not self.state.is_end_of_game():
             for action in self.state.allowed_actions:
-                action_prob = action_probs[action]
                 state = self.state.take_action(action)
-                self.children[action] = AlphaConnectNode(state, self.model, self, action_prob=action_prob,
+                self.children[action] = AlphaConnectNode(state, self.model, self, action_prob=0.0,
                                                          c_puct=self.c_puct, temperature=self.temperature)
-        return state_value
 
-    def simulate(self) -> Tuple[float, Dict[Action, float]]:
-        """Get value for next color and action probabilities"""
-        if self.state.is_end_of_game():
-            if self.state.winner == self.state.next_color:
-                # game is already done, previous player is winner so current player gets a reward of -1
-                state_value = -1.0
-            elif self.state.winner == self.state.next_color.other():
-                state_value = 1.0
-            else:
-                state_value = 0.0
-            action_probs = None
-        else:
-            # todo predict for multiple states in batches
-            array = self.state.to_numpy(batch=True)
-            pred_actions, pred_value = self.model.predict(array)
-            state_value = pred_value.item()
-            action_probs = dict(zip(Action.iter_actions(), pred_actions[0]))
+    def lazy_evaluate_and_backup(self):
+        self.model.simulate(self, self.backup)
 
-        return state_value, action_probs
+    def backup(self, value: float, action_probs: Union[None, Dict[Action, float]]):
+        if not self.state.is_end_of_game() and action_probs is not None:
+            for action in self.state.allowed_actions:
+                self.children[action].action_prob = action_probs[action]
 
-    def propagate(self, value: float):
         self.visit_count += 1
         self.total_value += value
         if self.parent is not None:
-            self.parent.propagate(-value)
+            self.parent.backup(-value, None)
 
     def find_state(self, state: State):
         if self.state.number_of_stones < state.number_of_stones:
@@ -222,3 +217,42 @@ class AlphaConnectNode(object):
     def exponentiated_visit_count(self) -> float:
         # todo reduce temperature later in the game
         return self.visit_count ** (1.0 / self.temperature)
+
+
+class BatchEvaluator(object):
+    """Evaluate multiple states in batches"""
+
+    def __init__(self, model, batch_size=8):
+        self.model = model
+        self.batch_size = batch_size
+        self.queue = []
+
+    def simulate(self, node: 'AlphaConnectNode', callback):
+        if node.state.is_end_of_game():
+            state_value = self.evaluate_final_state(node)
+            callback(state_value, None)
+        else:
+            self.queue.append((node, callback))
+
+        if len(self.queue) >= self.batch_size:
+            nodes, callbacks = zip(*self.queue)
+            array = np.concatenate(list(map(lambda node: node.state.to_numpy(batch=True), nodes)))
+            pred_actions, pred_value = self.model.predict(array)
+
+            for i, callback in enumerate(callbacks):
+                state_value = pred_value[i].item()
+                action_probs = dict(zip(Action.iter_actions(), pred_actions[i]))
+                callback(state_value, action_probs)
+
+            self.queue = []
+
+    @staticmethod
+    def evaluate_final_state(node):
+        if node.state.winner == node.state.next_color:
+            # game is already done, previous player is winner so current player gets a reward of -1
+            state_value = -1.0
+        elif node.state.winner == node.state.next_color.other():
+            state_value = 1.0
+        else:
+            state_value = 0.0
+        return state_value

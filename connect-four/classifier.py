@@ -26,7 +26,7 @@ def train_new_model(data_path, log_path=None, max_games=None):
         callbacks = [EarlyStopping(patience=5)]
         if log_path is not None:
             callbacks.append(CSVLogger(log_path))
-        model.fit(x_state, [y_policy, y_reward], epochs=100, validation_split=0.3, batch_size=16,
+        model.fit(x_state, [y_policy, y_reward], epochs=100, validation_split=0.3, batch_size=8,
                   callbacks=callbacks)
 
     return model

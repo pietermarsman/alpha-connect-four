@@ -20,12 +20,14 @@ def optimize(rounds, games_per_round, processes):
         model_iteration, model_path = latest_model_path(MODEL_DIR)
 
     for _ in range(rounds):
+        # todo fix bug: second round of learning never starts
         data_dir = os.path.join(DATA_DIR, '%6.6d' % model_iteration)
         os.makedirs(data_dir, exist_ok=True)
         simulate(model_path, games_per_round, data_dir, processes=processes)
 
         model_iteration, model_path = new_model_path(MODEL_DIR)
         train_new_model(data_dir, model_path)
+        # todo save validation performance
 
 
 def is_first_model(model_dir):

@@ -219,4 +219,5 @@ class AlphaConnectNode(object):
         return {action: policy_value / sum_policy for action, policy_value in raw_policy.items()}
 
     def exponentiated_visit_count(self) -> float:
+        # todo reduce temperature later in the game
         return self.visit_count ** (1.0 / self.temperature)

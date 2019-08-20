@@ -136,6 +136,7 @@ class AlphaConnectPlayer(Player):
         if self.root is None:
             self.root = AlphaConnectNode(state, self.model, c_puct=self.exploration, temperature=self.temperature)
         self.root.parent = None
+        # todo add support for fixed number of searches instead of time-based
         while time.time() - t0 < self.budget / 1000:
             self.root.search()
         self.save_policy()

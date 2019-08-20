@@ -4,7 +4,7 @@ from random import sample
 
 import numpy as np
 from tensorflow.python.keras import Input, Model, regularizers
-from tensorflow.python.keras.callbacks import EarlyStopping
+from tensorflow.python.keras.callbacks import EarlyStopping, CSVLogger
 from tensorflow.python.keras.layers import Dense, Conv3D, Flatten, AveragePooling3D, Maximum, Reshape, \
     RepeatVector, Permute, BatchNormalization, Activation, Add
 from tensorflow.python.keras.optimizers import Adam
@@ -14,17 +14,19 @@ from observer import AlphaConnectSerializer
 from state import State, FOUR, Action, Color, Augmentation
 
 
-def train_new_model(data_path, output_path):
+def train_new_model(data_path, log_path=None):
     input_shape = State.empty().to_numpy().shape[-1]
     model = create_model(input_shape, filters=10)
     print(model.summary())
 
     if data_path is not None:
         x_state, y_policy, y_reward = read_data(data_path)
+        callbacks = [EarlyStopping(patience=5)]
+        if log_path is not None:
+            callbacks.append(CSVLogger(log_path))
         model.fit(x_state, [y_policy, y_reward], epochs=100, validation_split=0.3, batch_size=16,
-                  callbacks=[EarlyStopping(patience=5)])
+                  callbacks=callbacks)
 
-    model.save(output_path)
     return model
 
 

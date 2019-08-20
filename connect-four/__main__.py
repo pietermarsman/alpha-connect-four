@@ -20,7 +20,8 @@ def play_game(args):
 
 
 def train_model(args):
-    train_new_model(args.data_path, args.model_path)
+    model = train_new_model(args.data_path)
+    model.save(args.model_path)
 
 
 def simulate_alpha_connect_game(args):

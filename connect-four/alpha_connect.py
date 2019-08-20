@@ -15,7 +15,8 @@ DATA_DIR = os.path.join(_ROOT_DIR, 'data')
 def optimize(rounds, games_per_round, processes):
     if is_first_model(MODEL_DIR):
         model_iteration, model_path = new_model_path(MODEL_DIR)
-        train_new_model(None, model_path)
+        model = train_new_model(None)
+        model.save(model_path)
     else:
         model_iteration, model_path = latest_model_path(MODEL_DIR)
 
@@ -26,8 +27,9 @@ def optimize(rounds, games_per_round, processes):
         simulate(model_path, games_per_round, data_dir, processes=processes)
 
         model_iteration, model_path = new_model_path(MODEL_DIR)
-        train_new_model(data_dir, model_path)
-        # todo save validation performance
+        log_path = replace_extension(model_path, 'csv')
+        model = train_new_model(data_dir, log_path)
+        model.save(model_path)
 
 
 def is_first_model(model_dir):
@@ -71,6 +73,12 @@ def new_model_path(model_dir):
     model_iteration = len(model_files)
     model_path = os.path.abspath(os.path.join(model_dir, '%6.6d.h5' % model_iteration))
     return model_iteration, model_path
+
+
+def replace_extension(path: str, new_extension: str):
+    name, ext = os.path.splitext(path)
+    new_extension = new_extension.strip('.')
+    return name + '.' + new_extension
 
 
 def list_files(path, ext):

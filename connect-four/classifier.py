@@ -1,9 +1,9 @@
 import json
-import os
 from random import sample
 
 import numpy as np
 from tensorflow.python.keras import Input, Model, regularizers
+from tensorflow.python.keras import backend as K
 from tensorflow.python.keras.callbacks import EarlyStopping, CSVLogger
 from tensorflow.python.keras.layers import Dense, Conv3D, Flatten, AveragePooling3D, Maximum, Reshape, \
     RepeatVector, Permute, BatchNormalization, Activation, Add
@@ -12,15 +12,17 @@ from tqdm import tqdm
 
 from observer import AlphaConnectSerializer
 from state import State, FOUR, Action, Color, Augmentation
+from util import list_files
 
 
-def train_new_model(data_path, log_path=None):
+def train_new_model(data_path, log_path=None, max_games=None):
+    K.clear_session()
     input_shape = State.empty().to_numpy().shape[-1]
     model = create_model(input_shape, filters=10)
     print(model.summary())
 
     if data_path is not None:
-        x_state, y_policy, y_reward = read_data(data_path)
+        x_state, y_policy, y_reward = read_data(data_path, max_games)
         callbacks = [EarlyStopping(patience=5)]
         if log_path is not None:
             callbacks.append(CSVLogger(log_path))
@@ -30,19 +32,17 @@ def train_new_model(data_path, log_path=None):
     return model
 
 
-def read_data(data_path, n_games=None):
-    files = os.listdir(data_path)
-    game_names = list(sorted([f for f in files if f.endswith('.json')]))
+def read_data(data_path, max_games=None):
+    game_files = list_files(data_path, '.json')
 
-    if n_games is not None:
-        game_names = game_names[-n_games:]
+    if max_games is not None:
+        game_files = list(game_files)[-max_games:]
 
     x = []
     y_policy = []
     y_reward = []
 
-    for game_name in tqdm(game_names):
-        game_path = os.path.join(data_path, game_name)
+    for game_path in tqdm(game_files):
         with open(game_path, 'r') as fin:
             game_data = json.load(fin)
 

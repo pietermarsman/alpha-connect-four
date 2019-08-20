@@ -1,9 +1,9 @@
 import os
 
 import pytest
-from keras import Input, Model
-from keras.layers import Flatten, Dense
-from keras.optimizers import Adam
+from tensorflow.python.keras import Input, Model
+from tensorflow.python.keras.layers import Flatten, Dense
+from tensorflow.python.keras.optimizers import Adam
 
 from game import TwoPlayerGame
 from player import AlphaConnectPlayer

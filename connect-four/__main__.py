@@ -24,7 +24,7 @@ def train_model(args):
 
 
 def simulate_alpha_connect_game(args):
-    simulate_once(args.model_path, args.data_path)
+    simulate_once(args.model_path, args.data_path, verbose=True)
 
 
 def optimize_alpha_connect(args):

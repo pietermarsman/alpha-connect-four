@@ -140,7 +140,8 @@ class AlphaConnectNode(object):
         self.action_prob = action_prob
 
     def __str__(self):
-        return 'Node(%d / %d = %.2f)' % (self.total_value, self.visit_count, self.total_value / self.visit_count)
+        return 'Node(prior=%.2f, value=%.2f/%d=%.2f, puct=%.2f)' % \
+               (self.action_prob, self.total_value, self.visit_count, self.total_value / self.visit_count, self.puct())
 
     def search(self):
         selected_node = self.select()

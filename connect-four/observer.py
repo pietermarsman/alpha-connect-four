@@ -47,10 +47,11 @@ class AlphaConnectSerializer(Observer):
         self.data_dir = data_dir
 
     def notify_end_game(self, game: TwoPlayerGame):
-        if self.is_self_play(game):
+        if self.is_self_play(game) and game.current_state.has_winner():
             self.save_game(game)
 
-    def is_self_play(self, game):
+    @staticmethod
+    def is_self_play(game):
         player1 = game.players[Color.WHITE]
         player2 = game.players[Color.BROWN]
         return isinstance(player1, AlphaConnectPlayer) and player1 is player2

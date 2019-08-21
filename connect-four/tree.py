@@ -186,11 +186,22 @@ class AlphaConnectNode(object):
         if not self.state.is_end_of_game() and action_probs is not None:
             for action in self.state.allowed_actions:
                 self.children[action].action_prob = action_probs[action]
+            if self.state.number_of_stones == 0:
+                self._add_dirichlet_noise_to_action_prob()
 
         self.visit_count += 1
         self.total_value += value
         if self.parent is not None:
             self.parent.backup(-value, None)
+
+    def _add_dirichlet_noise_to_action_prob(self):
+        """Additional dirichlet noise is added to empty state for additional exploration
+
+        Dir(0.03) is highly skewed, putting almost all random weight onto a single action.
+        """
+        dirichlet_noise = np.random.dirichlet([0.03 for _ in range(len(self.children))])
+        for action, noise in zip(self.children, dirichlet_noise.tolist()):
+            self.children[action].action_prob = self.children[action].action_prob * .75 + noise * .25
 
     def find_state(self, state: State):
         if self.state.number_of_stones < state.number_of_stones:

@@ -1,4 +1,5 @@
 import os
+import time
 from itertools import cycle
 from multiprocessing.pool import Pool
 
@@ -16,7 +17,7 @@ def optimize_once(data_dir, model_path, max_games=None):
     model.save(model_path)
 
 
-def optimize_continuously(model_dir, data_dir, max_games=None):
+def optimize_continuously(model_dir, data_dir, max_games=None, wait=30 * 60):
     if is_first_model(model_dir):
         _, model_path = new_model_path(model_dir)
         model = train_new_model(None)
@@ -27,6 +28,7 @@ def optimize_continuously(model_dir, data_dir, max_games=None):
         log_path = replace_extension(model_path, '.csv')
         model = train_new_model(data_dir, log_path, max_games)
         model.save(model_path)
+        time.sleep(wait)
 
 
 def simulate_continuously(model_dir, data_dir, processes=1):

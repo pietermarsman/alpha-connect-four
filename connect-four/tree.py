@@ -129,14 +129,12 @@ class MonteCarloNode(object):
 
 
 class AlphaConnectNode(object):
-    def __init__(self, state: State, model, parent=None, action_prob=None, c_puct=1.0, temperature=1.0):
+    def __init__(self, state: State, model, parent=None, action_prob=None):
         self.state = state
         if not isinstance(model, BatchEvaluator):
             model = BatchEvaluator(model)
         self.model = model
         self.parent = parent  # type: Union[AlphaConnectNode, None]
-        self.c_puct = c_puct
-        self.temperature = temperature
         self.children = {}  # type: Dict[Action, AlphaConnectNode]
         self.is_played = False
 
@@ -147,37 +145,40 @@ class AlphaConnectNode(object):
         self.action_prob = action_prob
 
     def __str__(self):
-        return 'Node(prior=%.2f, value=%.2f/%d=%.2f, puct=%.2f)' % \
-               (self.action_prob, self.total_value, self.visit_count, self.total_value / self.visit_count, self.puct())
+        return 'Node(prior=%.2f, value=%.2f/%d=%.2f)' % \
+               (self.action_prob, self.total_value, self.visit_count, self.total_value / self.visit_count)
 
-    def search(self):
-        selected_node = self.select()
+    def search(self, c_puct: float):
+        """Do a single MCTS search, with a select, expand, simulate and backup phase
+
+        :param c_puct: exploration constant, higher is more exploration
+        """
+        selected_node = self.select(c_puct)
         selected_node.expand()
         selected_node.lazy_evaluate_and_backup()
 
-    def select(self) -> 'AlphaConnectNode':
+    def select(self, c_puct: float) -> 'AlphaConnectNode':
 
         if self.is_played and not self.state.is_end_of_game():
-            child = max(self.children.values(), key=lambda c: c.puct())
-            return child.select()
+            child = max(self.children.values(), key=lambda child: child.puct(c_puct))
+            return child.select(c_puct)
         else:
             return self
 
-    def puct(self):
+    def puct(self, c_puct: float):
         if self.parent is None:
             return 0.0
 
         average_value = self.total_value / self.visit_count
         exploration = self.action_prob * (math.sqrt(self.parent.visit_count) / self.visit_count)
-        return average_value + self.c_puct * exploration
+        return average_value + c_puct * exploration
 
     def expand(self):
         self.is_played = True
         if not self.state.is_end_of_game():
             for action in self.state.allowed_actions:
                 state = self.state.take_action(action)
-                self.children[action] = AlphaConnectNode(state, self.model, self, action_prob=0.0,
-                                                         c_puct=self.c_puct, temperature=self.temperature)
+                self.children[action] = AlphaConnectNode(state, self.model, self, action_prob=0.0)
 
     def lazy_evaluate_and_backup(self):
         self.model.simulate(self, self.backup)
@@ -215,19 +216,18 @@ class AlphaConnectNode(object):
 
         return None
 
-    def sample_action(self):
-        actions, probabilities = zip(*self.policy().items())
+    def sample_action(self, temperature):
+        actions, probabilities = zip(*self.policy(temperature).items())
         action = random.choices(list(actions), list(probabilities))[0]
         return action
 
-    def policy(self) -> Dict[Action, float]:
-        raw_policy = {action: node.exponentiated_visit_count() for action, node in self.children.items()}
+    def policy(self, temperature) -> Dict[Action, float]:
+        raw_policy = {action: node.exponentiated_visit_count(temperature) for action, node in self.children.items()}
         sum_policy = sum(raw_policy.values())
         return {action: policy_value / sum_policy for action, policy_value in raw_policy.items()}
 
-    def exponentiated_visit_count(self) -> float:
-        # todo reduce temperature later in the game
-        return self.visit_count ** (1.0 / self.temperature)
+    def exponentiated_visit_count(self, temperature) -> float:
+        return self.visit_count ** (1.0 / temperature)
 
 
 class BatchEvaluator(object):

@@ -105,9 +105,9 @@ class AlphaConnectPlayer(Player):
     def __init__(self, name: str, model_path, exploration=1.0, start_temperature=1.0, time_budget=None,
                  search_budget=None):
         self.model = self.load_model(model_path)
-        self.root = AlphaConnectNode(State.empty(), self.model, c_puct=exploration, temperature=start_temperature)
+        self.root = AlphaConnectNode(State.empty(), self.model)
         self.exploration = exploration
-        self.temperature = start_temperature
+        self._temperature = start_temperature
 
         if time_budget is not None and search_budget is None:
             self.budget_type = 'time'
@@ -135,28 +135,30 @@ class AlphaConnectPlayer(Player):
         t0 = time.time()
         self.root = self.root.find_state(state)
         if self.root is None:
-            self.root = AlphaConnectNode(state, self.model, c_puct=self.exploration, temperature=self.temperature)
+            self.root = AlphaConnectNode(state, self.model)
         self.root.parent = None
-        self._lower_temperature_later_in_game(self.root)
 
         if self.budget_type == 'time':
             while time.time() - t0 < self.budget / 1000:
-                self.root.search()
+                self.root.search(self.exploration)
         else:
             for _ in range(self.budget):
-                self.root.search()
+                self.root.search(self.exploration)
 
         self.save_policy()
-        action = self.root.sample_action()
+        action = self.root.sample_action(self.temperature(state))
         return action
 
-    def _lower_temperature_later_in_game(self, node: AlphaConnectNode):
+    def temperature(self, state: State):
         """AlphaGo lowers the temperature to infinitesimal after 30 moves
 
         Connect Four is a smaller game, so we use 16 moves
         """
-        if node.state.number_of_stones > 16:
-            self.root.temperature = 0.01
+        if state.number_of_stones < 16:
+            return self._temperature
+        else:
+            return 0.01
 
     def save_policy(self):
-        self.policy_history.append(self.root.policy())
+        temperature = self.temperature(self.root.state)
+        self.policy_history.append(self.root.policy(temperature))

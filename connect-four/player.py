@@ -157,7 +157,7 @@ class AlphaConnectPlayer(Player):
         if state.number_of_stones < 16:
             return self._temperature
         else:
-            return 0.01
+            return 0.1
 
     def save_policy(self):
         temperature = self.temperature(self.root.state)

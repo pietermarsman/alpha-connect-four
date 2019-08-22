@@ -63,7 +63,7 @@ def is_first_model(model_dir):
 
 
 def latest_model_path(model_dir):
-    model_files = list(list_files(model_dir, '.h5'))
+    model_files = list(sorted(list_files(model_dir, '.h5')))
     model_iteration = len(model_files)
     model_path = os.path.abspath(os.path.join(model_dir, model_files[-1]))
     return model_iteration - 1, model_path

@@ -1,6 +1,7 @@
 from collections import namedtuple
 from enum import Enum
 from itertools import product, permutations
+from operator import itemgetter
 from typing import Dict, Set, NamedTuple, Union
 
 import numpy as np
@@ -227,7 +228,7 @@ class State(_State):
             allowed_actions.remove(action)
         number_of_stones += 1
         affected_lines = self.POSITION_TO_LINES[position]
-        for line_i, line_ii in affected_lines:
+        for line_i, _ in affected_lines:
             if self.next_color == Color.BROWN:
                 brown_lines[line_i] += 1
                 if brown_lines[line_i] == FOUR:
@@ -282,6 +283,19 @@ class State(_State):
         top = (z == 3)
         middle_z = not (bottom or top)
 
+        # todo compute at state creation
+        lines = list(map(itemgetter(0), self.POSITION_TO_LINES[pos]))
+        white_lines = [self.white_lines[line] for line in lines]
+        brown_lines = [self.brown_lines[line] for line in lines]
+        if self.next_color == Color.WHITE:
+            my_lines, other_lines = white_lines, brown_lines
+        else:
+            my_lines, other_lines = brown_lines, white_lines
+        my_lines_free = sum((other_line == 0 for other_line in other_lines))
+        other_lines_block = sum((my_line == 0 for my_line in my_lines))
+        max_my_line = max(my_lines)
+        max_other_line = max(other_lines)
+
         return (
             stone == self.next_color,
             stone == self.next_color.other(),
@@ -292,4 +306,8 @@ class State(_State):
             bottom,
             top,
             middle_z,
+            my_lines_free,
+            other_lines_block,
+            max_my_line,
+            max_other_line
         )

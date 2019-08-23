@@ -242,22 +242,18 @@ class State(_State):
         for line_i, _ in affected_lines:
             if self.next_color == Color.BROWN:
                 brown_lines[line_i] += 1
-                if brown_max_line[position] >= 0:
-                    brown_max_line[position] = max(brown_lines[line_i], brown_max_line[position])
-                if brown_lines[line_i] == 1:
-                    for line_pos in self.LINES[line_i]:
+                for line_pos in self.LINES[line_i]:
+                    brown_max_line[line_pos] = max(brown_lines[line_i], brown_max_line[line_pos])
+                    if brown_lines[line_i] == 1:
                         white_lines_free[line_pos] -= 1
-                        white_max_line[line_pos] = -1
                 if brown_lines[line_i] == FOUR:
                     winner = Color.BROWN
             else:
                 white_lines[line_i] += 1
-                if white_max_line[position] >= 0:
-                    white_max_line[position] = max(white_lines[line_i], white_max_line[position])
-                if white_lines[line_i] == 1:
-                    for line_pos in self.LINES[line_i]:
+                for line_pos in self.LINES[line_i]:
+                    white_max_line[line_pos] = max(white_lines[line_i], white_max_line[line_pos])
+                    if white_lines[line_i] == 1:
                         brown_lines_free[line_pos] -= 1
-                        white_max_line[line_pos] = -1
                 if white_lines[line_i] == FOUR:
                     winner = Color.WHITE
 

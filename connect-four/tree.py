@@ -226,7 +226,7 @@ class AlphaConnectNode(object):
 class BatchEvaluator(object):
     """Evaluate multiple states in batches"""
 
-    def __init__(self, model, batch_size=8):
+    def __init__(self, model, batch_size=16):
         self.model = model
         self.batch_size = batch_size
         self.queue = []

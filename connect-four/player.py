@@ -9,7 +9,7 @@ from tensorflow.python.keras.engine.saving import load_model
 
 from analyzer import player_value
 from state import State, FOUR, Action
-from tree import MiniMaxNode, MonteCarloNode, AlphaConnectNode
+from tree import MiniMaxNode, MonteCarloNode, AlphaConnectNode, BatchEvaluator
 
 
 class Player(metaclass=ABCMeta):
@@ -105,7 +105,7 @@ class AlphaConnectPlayer(Player):
     def __init__(self, name: str, model_path, exploration=1.0, start_temperature=1.0, time_budget=None,
                  search_budget=None):
         self.model = self.load_model(model_path)
-        self.root = AlphaConnectNode(State.empty(), self.model)
+        self.root = AlphaConnectNode(State.empty())
         self.exploration = exploration
         self._temperature = start_temperature
 
@@ -126,7 +126,7 @@ class AlphaConnectPlayer(Player):
         model = load_model(model_path)
         # first prediction takes more time
         model.predict(np.array([State.empty().to_numpy()]))
-        return model
+        return BatchEvaluator(model)
 
     def clear_session(self):
         K.clear_session()
@@ -135,15 +135,15 @@ class AlphaConnectPlayer(Player):
         t0 = time.time()
         self.root = self.root.find_state(state)
         if self.root is None:
-            self.root = AlphaConnectNode(state, self.model)
+            self.root = AlphaConnectNode(state)
         self.root.parent = None
 
         if self.budget_type == 'time':
             while time.time() - t0 < self.budget / 1000:
-                self.root.search(self.exploration)
+                self.root.search(self.model, self.exploration)
         else:
             for _ in range(self.budget):
-                self.root.search(self.exploration)
+                self.root.search(self.model, self.exploration)
 
         self.save_policy()
         action = self.root.sample_action(self.temperature(state))

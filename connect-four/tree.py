@@ -1,6 +1,5 @@
 import math
 import random
-from queue import Queue
 from typing import Dict, Union, List
 
 import numpy as np
@@ -129,16 +128,11 @@ class MonteCarloNode(object):
 
 
 class AlphaConnectNode(object):
-    def __init__(self, state: State, model, parent=None, action_prob=None):
+    def __init__(self, state: State, parent=None, action_prob=None):
         self.state = state
-        if not isinstance(model, BatchEvaluator):
-            model = BatchEvaluator(model)
-        self.model = model
         self.parent = parent  # type: Union[AlphaConnectNode, None]
         self.children = {}  # type: Dict[Action, AlphaConnectNode]
         self.is_played = False
-
-        self.evaluation_queue = Queue()
 
         self.visit_count = 1
         self.total_value = 0
@@ -148,17 +142,16 @@ class AlphaConnectNode(object):
         return 'Node(prior=%.2f, value=%.2f/%d=%.2f)' % \
                (self.action_prob, self.total_value, self.visit_count, self.total_value / self.visit_count)
 
-    def search(self, c_puct: float):
+    def search(self, model: 'BatchEvaluator', c_puct: float):
         """Do a single MCTS search, with a select, expand, simulate and backup phase
 
         :param c_puct: exploration constant, higher is more exploration
         """
         selected_node = self.select(c_puct)
         selected_node.expand()
-        selected_node.lazy_evaluate_and_backup()
+        self.lazy_evaluate_and_backup(model)
 
     def select(self, c_puct: float) -> 'AlphaConnectNode':
-
         if self.is_played and not self.state.is_end_of_game():
             child = max(self.children.values(), key=lambda child: child.puct(c_puct))
             return child.select(c_puct)
@@ -174,14 +167,14 @@ class AlphaConnectNode(object):
         return average_value + c_puct * exploration
 
     def expand(self):
-        self.is_played = True
         if not self.state.is_end_of_game():
             for action in self.state.allowed_actions:
                 state = self.state.take_action(action)
-                self.children[action] = AlphaConnectNode(state, self.model, self, action_prob=0.0)
+                self.children[action] = AlphaConnectNode(state, self, action_prob=0.0)
+        self.is_played = True
 
-    def lazy_evaluate_and_backup(self):
-        self.model.simulate(self, self.backup)
+    def lazy_evaluate_and_backup(self, model: 'BatchEvaluator'):
+        model.simulate(self, callback=self.backup)
 
     def backup(self, value: float, action_probs: Union[None, Dict[Action, float]]):
         if not self.state.is_end_of_game() and action_probs is not None:

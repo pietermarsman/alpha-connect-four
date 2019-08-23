@@ -148,3 +148,44 @@ def test_state_to_numpy_with_three_quarter_rotation_and_x_flip():
 def test_position_rotation():
     position = Position(0, 3, 4).augment(Augmentation(Rotation.HALF, False, False))
     assert Position(3, 0, 4) == position
+
+
+def test_white_lines_is_updated_after_action():
+    state = State.empty()
+    white_action = Action(2, 3)
+    white_position = Position.from_action_and_height(white_action, 0)
+    brown_action = Action(1, 2)
+    brown_position = Position.from_action_and_height(brown_action, 0)
+    intersection_postition = Position(white_position.x, brown_position.y, 0)
+
+    state = state.take_action(white_action)
+    state = state.take_action(brown_action)
+
+    # white position
+    for line_i, _ in State.POSITION_TO_LINES[white_position]:
+        assert 1 == state.white_lines[line_i]
+        assert 0 == state.brown_lines[line_i]
+
+    assert 4 == state.white_lines_free[white_position]
+    assert 0 == state.brown_lines_free[white_position]
+
+    assert 1 == state.white_max_line[white_position]
+    assert 0 == state.brown_max_line[white_position]
+
+    # brown position
+    for line_i, _ in State.POSITION_TO_LINES[brown_position]:
+        assert 1 == state.brown_lines[line_i]
+        assert 0 == state.white_lines[line_i]
+
+    assert 4 == state.brown_lines_free[brown_position]
+    assert 0 == state.white_lines_free[brown_position]
+
+    assert 1 == state.brown_max_line[brown_position]
+    assert 0 == state.white_max_line[brown_position]
+
+    # intersection
+    assert 3 == state.brown_lines_free[intersection_postition]
+    assert 3 == state.white_lines_free[intersection_postition]
+
+    assert 1 == state.brown_max_line[intersection_postition]
+    assert 1 == state.white_max_line[intersection_postition]

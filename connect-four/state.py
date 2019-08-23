@@ -1,7 +1,6 @@
 from collections import namedtuple
 from enum import Enum
 from itertools import product, permutations
-from operator import itemgetter
 from typing import Dict, Set, NamedTuple, Union
 
 import numpy as np
@@ -182,6 +181,10 @@ _State = NamedTuple('State', [
     ('number_of_stones', int),
     ('brown_lines', Dict[int, int]),
     ('white_lines', Dict[int, int]),
+    ('brown_lines_free', Dict[Position, int]),
+    ('white_lines_free', Dict[Position, int]),
+    ('brown_max_line', Dict[Position, int]),
+    ('white_max_line', Dict[Position, int]),
     ('winner', Union[Color, None])
 ])
 
@@ -204,8 +207,12 @@ class State(_State):
         winner = None
         brown_lines = {line_i: 0 for line_i in cls.LINES.keys()}
         white_lines = {line_i: 0 for line_i in cls.LINES.keys()}
+        brown_lines_free = {pos: len(cls.POSITION_TO_LINES[pos]) for pos in Position.iter_positions()}
+        white_lines_free = {pos: len(cls.POSITION_TO_LINES[pos]) for pos in Position.iter_positions()}
+        brown_max_line = {pos: 0 for pos in Position.iter_positions()}
+        white_max_line = {pos: 0 for pos in Position.iter_positions()}
         return cls(stones, next_color, pin_height, allowed_actions, number_of_stones, brown_lines, white_lines,
-                   winner)
+                   brown_lines_free, white_lines_free, brown_max_line, white_max_line, winner)
 
     def take_action(self, action: Action) -> 'State':
         assert action in self.allowed_actions
@@ -218,6 +225,10 @@ class State(_State):
         number_of_stones = self.number_of_stones
         brown_lines = self.brown_lines.copy()
         white_lines = self.white_lines.copy()
+        brown_lines_free = self.brown_lines_free.copy()
+        white_lines_free = self.white_lines_free.copy()
+        brown_max_line = self.brown_max_line.copy()
+        white_max_line = self.white_max_line.copy()
         winner = self.winner
 
         position = Position.from_action_and_height(action, self.pin_height[action])
@@ -231,15 +242,27 @@ class State(_State):
         for line_i, _ in affected_lines:
             if self.next_color == Color.BROWN:
                 brown_lines[line_i] += 1
+                if brown_max_line[position] >= 0:
+                    brown_max_line[position] = max(brown_lines[line_i], brown_max_line[position])
+                if brown_lines[line_i] == 1:
+                    for line_pos in self.LINES[line_i]:
+                        white_lines_free[line_pos] -= 1
+                        white_max_line[line_pos] = -1
                 if brown_lines[line_i] == FOUR:
                     winner = Color.BROWN
             else:
                 white_lines[line_i] += 1
+                if white_max_line[position] >= 0:
+                    white_max_line[position] = max(white_lines[line_i], white_max_line[position])
+                if white_lines[line_i] == 1:
+                    for line_pos in self.LINES[line_i]:
+                        brown_lines_free[line_pos] -= 1
+                        white_max_line[line_pos] = -1
                 if white_lines[line_i] == FOUR:
                     winner = Color.WHITE
 
         return State(stones, next_color, pin_height, allowed_actions, number_of_stones, brown_lines,
-                     white_lines, winner)
+                     white_lines, brown_lines_free, white_lines_free, brown_max_line, white_max_line, winner)
 
     def __str__(self):
         state_array = [[['?' for _ in range(FOUR)] for _ in range(FOUR)] for _ in range(FOUR)]
@@ -283,18 +306,16 @@ class State(_State):
         top = (z == 3)
         middle_z = not (bottom or top)
 
-        # todo compute at state creation
-        lines = list(map(itemgetter(0), self.POSITION_TO_LINES[pos]))
-        white_lines = [self.white_lines[line] for line in lines]
-        brown_lines = [self.brown_lines[line] for line in lines]
         if self.next_color == Color.WHITE:
-            my_lines, other_lines = white_lines, brown_lines
+            my_lines_free = self.white_lines_free[pos]
+            other_lines_block = self.brown_lines_free[pos]
+            my_max_line = self.white_max_line[pos]
+            other_max_line = self.brown_max_line[pos]
         else:
-            my_lines, other_lines = brown_lines, white_lines
-        my_lines_free = sum((other_line == 0 for other_line in other_lines))
-        other_lines_block = sum((my_line == 0 for my_line in my_lines))
-        max_my_line = max(my_lines)
-        max_other_line = max(other_lines)
+            my_lines_free = self.brown_lines_free[pos]
+            other_lines_block = self.white_lines_free[pos]
+            my_max_line = self.brown_max_line[pos]
+            other_max_line = self.white_max_line[pos]
 
         return (
             stone == self.next_color,
@@ -308,6 +329,6 @@ class State(_State):
             middle_z,
             my_lines_free,
             other_lines_block,
-            max_my_line,
-            max_other_line
+            my_max_line,
+            other_max_line
         )

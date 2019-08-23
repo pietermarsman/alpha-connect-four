@@ -149,7 +149,7 @@ class AlphaConnectNode(object):
         """
         selected_node = self.select(c_puct)
         selected_node.expand()
-        self.lazy_evaluate_and_backup(model)
+        selected_node.lazy_evaluate_and_backup(model)
 
     def select(self, c_puct: float) -> 'AlphaConnectNode':
         if self.is_played and not self.state.is_end_of_game():

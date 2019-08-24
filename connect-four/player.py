@@ -160,5 +160,4 @@ class AlphaConnectPlayer(Player):
             return 0.1
 
     def save_policy(self):
-        temperature = self.temperature(self.root.state)
-        self.policy_history.append(self.root.policy(temperature))
+        self.policy_history.append(self.root.policy(1.0))

@@ -18,6 +18,7 @@ def optimize_once(data_dir, model_path, max_games=None):
 
 
 def optimize_continuously(model_dir, data_dir, max_games=None, wait=30 * 60):
+    os.makedirs(model_dir, exist_ok=True)
     if is_first_model(model_dir):
         _, model_path = new_model_path(model_dir)
         model = train_new_model(None)

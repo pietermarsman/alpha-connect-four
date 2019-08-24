@@ -32,4 +32,4 @@ def test_model_path():
 def test_alpha_connect_player_saves_policy(test_model_path):
     player = AlphaConnectPlayer('alpha', test_model_path, time_budget=5)
     game = TwoPlayerGame(State.empty(), player, player)
-    assert len(game.action_history) == len(player.policy_history)
+    assert len(game.action_history) == len(player.history)

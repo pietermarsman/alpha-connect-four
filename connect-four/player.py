@@ -118,7 +118,7 @@ class AlphaConnectPlayer(Player):
         else:
             raise ValueError('Either time_budget xor search_budget should be None, but not both or neither')
 
-        self.policy_history = []
+        self.history = []
         super().__init__(name)
 
     @staticmethod
@@ -160,4 +160,8 @@ class AlphaConnectPlayer(Player):
             return 0.1
 
     def save_policy(self):
-        self.policy_history.append(self.root.policy(1.0))
+        self.history.append({
+            'policy': self.root.policy(1.0),
+            'total_value': self.root.total_value,
+            'visit_count': self.root.visit_count
+        })

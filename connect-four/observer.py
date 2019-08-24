@@ -69,9 +69,12 @@ class AlphaConnectSerializer(Observer):
         winner_color = game.current_state.winner.value
         first_color = game.state_history[0].next_color.value
         actions = ''.join([hex(action[0] * FOUR + action[1])[2:] for action in game.action_history])
-        policy_history = game.players[Color.WHITE].policy_history
+        player_history = game.players[Color.WHITE].history
+        policy_history = [hist['policy'] for hist in player_history]
         policies = [{action.to_hex(): value for action, value in policy.items()} for policy in policy_history]
-        return {'winner': winner_color, 'starter': first_color, 'actions': actions, 'policies': policies}
+        value_history = [hist['total_value'] / hist['visit_count'] for hist in player_history]
+        return {'winner': winner_color, 'starter': first_color, 'actions': actions, 'policies': policies,
+                'values': value_history}
 
     @staticmethod
     def deserialize(data) -> Tuple[Color, Color, List[Action], List[Dict[Action, float]]]:

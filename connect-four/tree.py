@@ -252,11 +252,12 @@ class BatchEvaluator(object):
 
     @staticmethod
     def evaluate_final_state(node):
+        """Value of the game state for the next player"""
         if node.state.winner == node.state.next_color:
-            # game is already done, previous player is winner so current player gets a reward of -1
-            state_value = -1.0
-        elif node.state.winner == node.state.next_color.other():
+            # This is not possible but added for completeness. In a final game state the previous player has won.
             state_value = 1.0
+        elif node.state.winner == node.state.next_color.other():
+            state_value = -1.0
         else:
             state_value = 0.0
         return state_value

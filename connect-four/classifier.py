@@ -11,8 +11,8 @@ from tensorflow.python.keras.optimizers import Adam
 from tqdm import tqdm
 
 from observer import AlphaConnectSerializer
-from state import State, FOUR, Action, Color, Augmentation
-from util import list_files
+from state import State, FOUR, Action, Augmentation
+from util import list_files, winner_value
 
 
 def train_new_model(data_path, log_path=None, max_games=None):
@@ -61,18 +61,9 @@ def read_data(data_path, max_games=None):
 
             x.append(states[i].to_numpy(augmentation))
             y_policy.append([policies[i].get(action, 0.0) for action in augmentend_action_order])
-            y_reward.append(_encode_winner(final_state.winner, states[i]))
+            y_reward.append(winner_value(final_state.winner, states[i]))
 
     return np.array(x), np.array(y_policy), np.array(y_reward)
-
-
-def _encode_winner(winner: Color, state: State):
-    if winner is state.next_color:
-        return 1.0
-    elif winner is state.next_color.other():
-        return -1.0
-    else:
-        return 0.0
 
 
 def create_model(input_size, filters, c=10 ** -4, initialization='he_normal'):

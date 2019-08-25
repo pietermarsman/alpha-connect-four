@@ -5,7 +5,8 @@ from typing import Dict, Union, List
 import numpy as np
 
 from analyzer import player_value
-from state import Action, State, Color
+from state import Action, State, Color, FOUR
+from util import winner_value
 
 
 class MiniMaxNode(object):
@@ -162,7 +163,8 @@ class AlphaConnectNode(object):
         if self.parent is None:
             return 0.0
 
-        average_value = self.total_value / self.visit_count
+        # todo this function is used from the parent of this node and thus uses the inverse value, this is strange
+        average_value = -self.total_value / self.visit_count
         exploration = self.action_prob * (math.sqrt(self.parent.visit_count) / self.visit_count)
         return average_value + c_puct * exploration
 
@@ -170,23 +172,28 @@ class AlphaConnectNode(object):
         if not self.state.is_end_of_game():
             for action in self.state.allowed_actions:
                 state = self.state.take_action(action)
-                self.children[action] = AlphaConnectNode(state, self, action_prob=0.0)
+                self.children[action] = AlphaConnectNode(state, self, action_prob=1 / (FOUR * FOUR))
         self.is_played = True
 
     def lazy_evaluate_and_backup(self, model: 'BatchEvaluator'):
-        model.simulate(self, callback=self.backup)
+        self.increase_visit_count()
+        model.simulate(self, callback=self.backup_value)
 
-    def backup(self, value: float, action_probs: Union[None, Dict[Action, float]]):
+    def increase_visit_count(self):
+        self.visit_count += 1
+        if self.parent is not None:
+            self.parent.increase_visit_count()
+
+    def backup_value(self, value: float, action_probs: Union[None, Dict[Action, float]]):
         if not self.state.is_end_of_game() and action_probs is not None:
             for action in self.state.allowed_actions:
                 self.children[action].action_prob = action_probs[action]
             if self.state.number_of_stones == 0:
                 self._add_dirichlet_noise_to_action_prob()
 
-        self.visit_count += 1
         self.total_value += value
         if self.parent is not None:
-            self.parent.backup(-value, None)
+            self.parent.backup_value(-value, None)
 
     def _add_dirichlet_noise_to_action_prob(self):
         """Additional dirichlet noise is added to empty state for additional exploration
@@ -226,7 +233,7 @@ class AlphaConnectNode(object):
 class BatchEvaluator(object):
     """Evaluate multiple states in batches"""
 
-    def __init__(self, model, batch_size=16):
+    def __init__(self, model, batch_size=8):
         self.model = model
         self.batch_size = batch_size
         self.queue = []
@@ -253,11 +260,4 @@ class BatchEvaluator(object):
     @staticmethod
     def evaluate_final_state(node):
         """Value of the game state for the next player"""
-        if node.state.winner == node.state.next_color:
-            # This is not possible but added for completeness. In a final game state the previous player has won.
-            state_value = 1.0
-        elif node.state.winner == node.state.next_color.other():
-            state_value = -1.0
-        else:
-            state_value = 0.0
-        return state_value
+        return winner_value(node.state.winner, node.state)

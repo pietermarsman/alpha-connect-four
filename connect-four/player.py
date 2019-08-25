@@ -84,7 +84,7 @@ class MiniMaxPlayer(Player):
 
 
 class MonteCarloPlayer(Player):
-    def __init__(self, name: str, exploration, budget=1000):
+    def __init__(self, name: str = None, exploration=1.0, budget=1000):
         self.root = MonteCarloNode(State.empty(), exploration=exploration)
         self.exploration = exploration
         self.budget = budget
@@ -93,17 +93,19 @@ class MonteCarloPlayer(Player):
     def decide(self, state: State):
         t0 = time.time()
         self.root = self.root.find_state(state)
-        self.root.parent = None
         if self.root is None:
             self.root = MonteCarloNode(state, exploration=self.exploration)
+        self.root.parent = None
         while time.time() - t0 < self.budget / 1000:
             self.root.search()
         return self.root.best_action()
 
 
 class AlphaConnectPlayer(Player):
-    def __init__(self, name: str, model_path, exploration=1.0, start_temperature=1.0, time_budget=None,
+    def __init__(self, model_path, name: str = None, exploration=1.0, start_temperature=1.0, time_budget=None,
                  search_budget=None):
+        # todo add parameter for self-play
+
         self.model = self.load_model(model_path)
         self.root = AlphaConnectNode(State.empty())
         self.exploration = exploration

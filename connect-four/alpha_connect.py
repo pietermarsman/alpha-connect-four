@@ -28,6 +28,8 @@ def optimize_continuously(model_dir, data_dir, max_games=None, wait=30 * 60):
         _, model_path = new_model_path(model_dir)
         log_path = replace_extension(model_path, '.csv')
         model = train_new_model(data_dir, log_path, max_games)
+        # todo move model after saving to prevent OSError: Unable to open file (unable to lock file, errno = 35,
+        #  error message = 'Resource temporarily unavailable')
         model.save(model_path)
         time.sleep(wait)
 
@@ -48,7 +50,7 @@ def simulate_once_with_newest_model(directories):
 def simulate_once(model_path, data_dir, exploration=1.0, temperature=1.0, search_budget=1600, verbose=False):
     state = State.empty()
     player_name = 'AlphaConnect (%s)' % model_path.split('/')[-1]
-    player = AlphaConnectPlayer(player_name, model_path, exploration, temperature, search_budget=search_budget)
+    player = AlphaConnectPlayer(model_path, player_name, exploration, temperature, search_budget=search_budget)
     observers = [AlphaConnectSerializer(data_dir)]
     if verbose:
         observers.append(ConsoleObserver())

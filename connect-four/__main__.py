@@ -10,7 +10,7 @@ from state import State
 
 def _play_game(args):
     player2 = ConsolePlayer('You')
-    player1 = AlphaConnectPlayer('Computer', args.model_path, start_temperature=0.1, time_budget=14500)
+    player1 = AlphaConnectPlayer(args.model_path, 'Computer', start_temperature=0.1, time_budget=14500)
     observers = [ConsoleObserver()]
 
     game = TwoPlayerGame(State.empty(), player1, player2, observers)

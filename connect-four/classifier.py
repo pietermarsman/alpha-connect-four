@@ -1,5 +1,7 @@
 import json
+import os
 from random import sample
+from tempfile import NamedTemporaryFile
 
 import numpy as np
 from tensorflow.python.keras import Input, Model, regularizers
@@ -174,3 +176,9 @@ def normalized_relu(layer):
     norm = BatchNormalization()(layer)
     relu = ReLU()(norm)
     return relu
+
+
+def write_model(model, model_path):
+    with NamedTemporaryFile(dir=os.path.dirname(model_path)) as fout:
+        model.save(fout)
+        os.link(fout.name, model_path)

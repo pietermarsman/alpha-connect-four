@@ -3,7 +3,7 @@ import time
 from itertools import cycle
 from multiprocessing.pool import Pool
 
-from classifier import train_new_model
+from classifier import train_new_model, write_model
 from game import TwoPlayerGame
 from observer import ConsoleObserver, AlphaConnectSerializer
 from player import AlphaConnectPlayer
@@ -28,9 +28,7 @@ def optimize_continuously(model_dir, data_dir, max_games=None, wait=30 * 60):
         _, model_path = new_model_path(model_dir)
         log_path = replace_extension(model_path, '.csv')
         model = train_new_model(data_dir, log_path, max_games)
-        # todo move model after saving to prevent OSError: Unable to open file (unable to lock file, errno = 35,
-        #  error message = 'Resource temporarily unavailable')
-        model.save(model_path)
+        write_model(model, model_path)
         time.sleep(wait)
 
 

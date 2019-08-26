@@ -19,8 +19,8 @@ def test_model_path():
         filters = 13
         input = Input(shape=(FOUR, FOUR, FOUR, filters))
         flatten = Flatten()(input)
-        output_play = Dense(16, activation='softmax')(flatten)
-        output_win = Dense(1, activation='tanh')(flatten)
+        output_play = Dense(16, activation='softmax', kernel_initializer='zeros', bias_initializer='zeros')(flatten)
+        output_win = Dense(1, activation='tanh', kernel_initializer='zeros', bias_initializer='zeros')(flatten)
 
         model = Model(inputs=input, outputs=[output_play, output_win])
         optimizer = Adam()
@@ -33,7 +33,7 @@ def test_model_path():
 @pytest.fixture
 def players(test_model_path):
     return [GreedyPlayer(), MiniMaxPlayer(), MonteCarloPlayer(),
-            AlphaConnectPlayer(test_model_path, exploration=10.0, search_budget=16 * 16, self_play=True)]
+            AlphaConnectPlayer(test_model_path, exploration=10.0, search_budget=16 * 16, self_play=False)]
 
 
 @pytest.fixture

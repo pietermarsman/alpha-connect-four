@@ -112,17 +112,14 @@ class AlphaConnectPlayer(Player):
         self.root = None  # type: Union[None, AlphaConnectNode]
         self.set_root_node()
 
-        if not self.is_self_play and time_budget is not None:
+        if search_budget is None and time_budget is not None:
             self.budget_type = 'time'
             self.budget = time_budget
-        elif self.is_self_play and search_budget is not None:
+        elif search_budget is not None and time_budget is None:
             self.budget_type = 'search'
             self.budget = search_budget
         else:
-            if self.is_self_play:
-                raise ValueError('When using self-play a search_budget should be given')
-            else:
-                raise ValueError('When not using self-play, a time_budget should be given')
+            raise ValueError('Either time_budget xor search_budget should be None, not neither or both')
 
         self.history = []
         super().__init__(name)

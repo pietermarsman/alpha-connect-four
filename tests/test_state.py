@@ -1,9 +1,21 @@
+import random
 from itertools import product
 
 import numpy as np
+import pytest
 
 from state import State, Color, FOUR, _lines_on_one_axis, _lines_on_one_diagonal, \
     _lines_on_two_diagonals, Action, _lines, Augmentation, Rotation, Position
+
+
+@pytest.fixture
+def random_state():
+    state = State.empty()
+    for _ in range(16):
+        action = random.choice(list(state.allowed_actions))
+        state = state.take_action(action)
+
+    return state
 
 
 def test_all_actions_are_possible_in_empty_state():
@@ -97,7 +109,7 @@ def test_rotating_four_quarters_is_same():
     old_action = Action(1, 3)
     action = old_action
     for _ in range(4):
-        action = action.augment(Augmentation(Rotation.QUARTER, False, False))
+        action = action.augment(Augmentation(Rotation.QUARTER, False))
 
     assert old_action == action
 
@@ -105,8 +117,8 @@ def test_rotating_four_quarters_is_same():
 def test_flipping_twice_is_same():
     old_action = Action(0, 0)
     action = old_action
-    action = action.augment(Augmentation(Rotation.NO, True, False))
-    action = action.augment(Augmentation(Rotation.NO, True, False))
+    action = action.augment(Augmentation(Rotation.NO, True))
+    action = action.augment(Augmentation(Rotation.NO, True))
     assert old_action == action
 
 
@@ -128,7 +140,7 @@ def test_state_to_numpy_without_augmentation():
 def test_state_to_numpy_with_quarter_rotation():
     state = State.empty()
     state = state.take_action(Action(0, 0))
-    arr = state.to_numpy(Augmentation(Rotation.QUARTER, False, False))
+    arr = state.to_numpy(Augmentation(Rotation.QUARTER, False))
 
     expected = np.zeros((4, 4)).astype(bool)
     expected[3, 0] = True
@@ -138,7 +150,7 @@ def test_state_to_numpy_with_quarter_rotation():
 def test_state_to_numpy_with_three_quarter_rotation_and_x_flip():
     state = State.empty()
     state = state.take_action(Action(0, 0))
-    arr = state.to_numpy(Augmentation(Rotation.THREE_QUARTER, True, False))
+    arr = state.to_numpy(Augmentation(Rotation.THREE_QUARTER, True))
 
     expected = np.zeros((4, 4)).astype(bool)
     expected[3, 3] = True
@@ -146,8 +158,16 @@ def test_state_to_numpy_with_three_quarter_rotation_and_x_flip():
 
 
 def test_position_rotation():
-    position = Position(0, 3, 4).augment(Augmentation(Rotation.HALF, False, False))
+    position = Position(0, 3, 4).augment(Augmentation(Rotation.HALF, False))
     assert Position(3, 0, 4) == position
+
+
+def test_each_augmentation_result_in_unique_states(random_state):
+    augmented_states = []
+    for augmentation in Augmentation.iter_augmentations():
+        augmented_states.append(random_state.to_numpy(augmentation).tostring())
+
+    assert len(augmented_states) == len(set(augmented_states))
 
 
 def test_white_lines_is_updated_after_action():

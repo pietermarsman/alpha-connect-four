@@ -91,21 +91,19 @@ class Rotation(Enum):
 _Augmentation = NamedTuple('Augmentation', [
     ('rotation', Rotation),
     ('flip_x', bool),
-    ('flip_y', bool)
 ])
 
 
 class Augmentation(_Augmentation):
     @classmethod
     def identity(cls):
-        return Augmentation(Rotation.NO, False, False)
+        return Augmentation(Rotation.NO, False)
 
     @classmethod
     def iter_augmentations(cls):
         for rotation in Rotation.iter_rotations():
             for flip_x in [False, True]:
-                for flip_y in [False, True]:
-                    yield Augmentation(rotation, flip_x, flip_y)
+                yield Augmentation(rotation, flip_x)
 
 
 _Action = namedtuple('Action', ['x', 'y'])
@@ -146,9 +144,6 @@ class Action(_Action):
 
         if augmentation.flip_x:
             x = FOUR - 1 - x
-
-        if augmentation.flip_y:
-            y = FOUR - 1 - y
 
         return Action(x, y)
 

@@ -60,7 +60,6 @@ def other_win_in_one_move():
     return state
 
 
-
 def test_alpha_connect_player_saves_policy(test_model_path):
     player = AlphaConnectPlayer(test_model_path, 'alpha', time_budget=5)
     game = TwoPlayerGame(State.empty(), player, player)

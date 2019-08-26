@@ -1,11 +1,12 @@
 import math
 import random
+from operator import itemgetter
 from typing import Dict, Union, List
 
 import numpy as np
 
 from analyzer import player_value
-from state import Action, State, Color, FOUR
+from state import Action, State, Color
 from util import winner_value
 
 
@@ -141,7 +142,11 @@ class AlphaConnectNode(object):
 
     def __str__(self):
         return 'Node(prior=%.2f, value=%.2f/%d=%.2f)' % \
-               (self.action_prob, self.total_value, self.visit_count, self.total_value / self.visit_count)
+               (self.action_prob, self.total_value, self.visit_count, self.average_value)
+
+    @property
+    def average_value(self):
+        return self.total_value / self.visit_count
 
     def search(self, model: 'BatchEvaluator', c_puct: float):
         """Do a single MCTS search, with a select, expand, simulate and backup phase
@@ -154,35 +159,34 @@ class AlphaConnectNode(object):
 
     def select(self, c_puct: float) -> 'AlphaConnectNode':
         if self.is_played and not self.state.is_end_of_game():
-            child = max(self.children.values(), key=lambda child: child.puct(c_puct))
+            puct_policy = self.puct_weights(c_puct)
+            child = max(puct_policy.items(), key=itemgetter(1))[0]
             return child.select(c_puct)
         else:
             return self
 
-    def puct(self, c_puct: float):
-        if self.parent is None:
-            return 0.0
-
-        # todo this function is used from the parent of this node and thus uses the inverse value, this is strange
-        average_value = -self.total_value / self.visit_count
-        exploration = self.action_prob * (math.sqrt(self.parent.visit_count) / self.visit_count)
-        return average_value + c_puct * exploration
+    def puct_weights(self, c_puct: float) -> Dict[State, float]:
+        """Parameterized upper confidence tree weights for this node"""
+        states = self.children.values()
+        values = [-state.average_value for state in states]
+        visits = [state.action_prob * math.sqrt(self.visit_count) / state.visit_count for state in states]
+        return {state: value + c_puct * visit for state, value, visit in zip(states, values, visits)}
 
     def expand(self):
         if not self.state.is_end_of_game():
             for action in self.state.allowed_actions:
                 state = self.state.take_action(action)
-                self.children[action] = AlphaConnectNode(state, self, action_prob=1 / (FOUR * FOUR))
+                self.children[action] = AlphaConnectNode(state, self, action_prob=1 / len(self.state.allowed_actions))
         self.is_played = True
 
     def lazy_evaluate_and_backup(self, model: 'BatchEvaluator'):
-        self.increase_visit_count()
+        self.backup_visit_count()
         model.simulate(self, callback=self.backup_value)
 
-    def increase_visit_count(self):
+    def backup_visit_count(self):
         self.visit_count += 1
         if self.parent is not None:
-            self.parent.increase_visit_count()
+            self.parent.backup_visit_count()
 
     def backup_value(self, value: float, action_probs: Union[None, Dict[Action, float]]):
         if not self.state.is_end_of_game() and action_probs is not None:

@@ -87,6 +87,7 @@ class Rotation(Enum):
         yield from [Rotation.NO, Rotation.QUARTER, Rotation.HALF, Rotation.THREE_QUARTER]
 
 
+# todo add switch color
 _Augmentation = NamedTuple('Augmentation', [
     ('rotation', Rotation),
     ('flip_x', bool),

@@ -35,6 +35,7 @@ def train_new_model(data_path, log_path=None, max_games=None):
 
 def read_data(data_path, max_games=None):
     game_files = list_files(data_path, '.json')
+    augmentations = list(Augmentation.iter_augmentations())
 
     if max_games is not None:
         game_files = list(game_files)[-max_games:]
@@ -56,9 +57,9 @@ def read_data(data_path, max_games=None):
             states.append(state)
         states, final_state = states[:-1], states[-1]
 
-        n_samples = min(len(states), 8)
+        n_samples = min(len(states), len(augmentations))
         game_samples = sample(list(range(len(states))), n_samples)
-        for augmentation, i in zip(Augmentation.iter_augmentations(), game_samples):
+        for augmentation, i in zip(augmentations, game_samples):
             augmentend_action_order = sorted(Action.iter_actions(), key=lambda a: a.augment(augmentation).to_int())
 
             x.append(states[i].to_numpy(augmentation))
@@ -68,7 +69,7 @@ def read_data(data_path, max_games=None):
     return np.array(x), np.array(y_policy), np.array(y_reward)
 
 
-def create_model(input_size, filters, c=10 ** -4, initialization='he_normal'):
+def create_model(input_size, filters, c=10 ** -4):
     l2 = regularizers.l2(c)
     input = Input(shape=(FOUR, FOUR, FOUR, input_size))
 

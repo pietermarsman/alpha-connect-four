@@ -130,11 +130,12 @@ class MonteCarloNode(object):
 
 
 class AlphaConnectNode(object):
-    def __init__(self, state: State, parent=None, action_prob=None):
+    def __init__(self, state: State, parent=None, action_prob=None, add_dirichlet_noise=False):
         self.state = state
         self.parent = parent  # type: Union[AlphaConnectNode, None]
         self.children = {}  # type: Dict[Action, AlphaConnectNode]
         self.is_played = False
+        self.add_dirichlet_noise = add_dirichlet_noise
 
         self.visit_count = 1
         self.total_value = 0
@@ -192,7 +193,7 @@ class AlphaConnectNode(object):
         if not self.state.is_end_of_game() and action_probs is not None:
             for action in self.state.allowed_actions:
                 self.children[action].action_prob = action_probs[action]
-            if self.state.number_of_stones == 0:
+            if self.add_dirichlet_noise:
                 self._add_dirichlet_noise_to_action_prob()
 
         self.total_value += value
@@ -208,7 +209,7 @@ class AlphaConnectNode(object):
         for action, noise in zip(self.children, dirichlet_noise.tolist()):
             self.children[action].action_prob = self.children[action].action_prob * .75 + noise * .25
 
-    def find_state(self, state: State):
+    def find_state(self, state: State) -> Union[None, 'AlphaConnectNode']:
         if self.state.number_of_stones < state.number_of_stones:
             for child in self.children.values():
                 new_state = child.find_state(state)
@@ -217,27 +218,30 @@ class AlphaConnectNode(object):
         elif self.state.number_of_stones == state.number_of_stones:
             if self.state == state:
                 return self
+        else:
+            return None
 
-        return None
+    def sample_action(self, temperature: Union[None, float]):
+        if temperature is None:
+            return max(self.children.items(), key=lambda action_state: action_state[1].visit_count)[0]
+        else:
+            actions, probabilities = zip(*self.policy(temperature).items())
+            action = random.choices(list(actions), list(probabilities))[0]
+            return action
 
-    def sample_action(self, temperature):
-        actions, probabilities = zip(*self.policy(temperature).items())
-        action = random.choices(list(actions), list(probabilities))[0]
-        return action
-
-    def policy(self, temperature) -> Dict[Action, float]:
+    def policy(self, temperature: float) -> Dict[Action, float]:
         raw_policy = {action: node.exponentiated_visit_count(temperature) for action, node in self.children.items()}
         sum_policy = sum(raw_policy.values())
         return {action: policy_value / sum_policy for action, policy_value in raw_policy.items()}
 
-    def exponentiated_visit_count(self, temperature) -> float:
+    def exponentiated_visit_count(self, temperature: float) -> float:
         return self.visit_count ** (1.0 / temperature)
 
 
 class BatchEvaluator(object):
     """Evaluate multiple states in batches"""
 
-    def __init__(self, model, batch_size=8):
+    def __init__(self, model, batch_size):
         self.model = model
         self.batch_size = batch_size
         self.queue = []

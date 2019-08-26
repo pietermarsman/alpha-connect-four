@@ -33,7 +33,7 @@ def test_model_path():
 @pytest.fixture
 def players(test_model_path):
     return [GreedyPlayer(), MiniMaxPlayer(), MonteCarloPlayer(),
-            AlphaConnectPlayer(test_model_path, search_budget=16 * 16)]
+            AlphaConnectPlayer(test_model_path, exploration=10.0, search_budget=16 * 16, self_play=True)]
 
 
 @pytest.fixture

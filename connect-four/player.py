@@ -2,6 +2,7 @@ import time
 from abc import ABCMeta, abstractmethod
 from operator import itemgetter
 from random import choice
+from typing import Union
 
 import numpy as np
 from tensorflow.python.keras import backend as K
@@ -103,42 +104,57 @@ class MonteCarloPlayer(Player):
 
 class AlphaConnectPlayer(Player):
     def __init__(self, model_path, name: str = None, exploration=1.0, start_temperature=1.0, time_budget=None,
-                 search_budget=None):
-        # todo add parameter for self-play
-
-        self.model = self.load_model(model_path)
-        self.root = AlphaConnectNode(State.empty())
+                 search_budget=None, self_play=False, batch_size=8):
+        self.model = self.load_model(model_path, batch_size)
         self.exploration = exploration
         self._temperature = start_temperature
+        self.is_self_play = self_play
+        self.root = None  # type: Union[None, AlphaConnectNode]
+        self.set_root_node()
 
-        if time_budget is not None and search_budget is None:
+        if not self.is_self_play and time_budget is not None:
             self.budget_type = 'time'
             self.budget = time_budget
-        elif time_budget is None and search_budget is not None:
+        elif self.is_self_play and search_budget is not None:
             self.budget_type = 'search'
             self.budget = search_budget
         else:
-            raise ValueError('Either time_budget xor search_budget should be None, but not both or neither')
+            if self.is_self_play:
+                raise ValueError('When using self-play a search_budget should be given')
+            else:
+                raise ValueError('When not using self-play, a time_budget should be given')
 
         self.history = []
         super().__init__(name)
 
     @staticmethod
-    def load_model(model_path):
+    def load_model(model_path, batch_size):
         model = load_model(model_path)
         # first prediction takes more time
         model.predict(np.array([State.empty().to_numpy()]))
-        return BatchEvaluator(model)
+        return BatchEvaluator(model, batch_size)
+
+    def set_root_node(self, state: State = None):
+        if state is None:
+            state = State.empty()
+
+        if self.root is not None:
+            self.root = self.root.find_state(state)
+
+        if self.root is None:
+            self.root = AlphaConnectNode(state)
+
+        if self.is_self_play:
+            self.root.add_dirichlet_noise = True
+
+        self.root.parent = None
 
     def clear_session(self):
         K.clear_session()
 
     def decide(self, state: State):
         t0 = time.time()
-        self.root = self.root.find_state(state)
-        if self.root is None:
-            self.root = AlphaConnectNode(state)
-        self.root.parent = None
+        self.set_root_node(state)
 
         if self.budget_type == 'time':
             while time.time() - t0 < self.budget / 1000:
@@ -155,11 +171,12 @@ class AlphaConnectPlayer(Player):
         """AlphaGo lowers the temperature to infinitesimal after 30 moves
 
         Connect Four is a smaller game, so we use 16 moves
+
+        When playing for real an infinitesimal temperature is always used
         """
-        if state.number_of_stones < 16:
+        if self.is_self_play and state.number_of_stones < 16:
             return self._temperature
-        else:
-            return 0.1
+        return None
 
     def save_policy(self):
         self.history.append({

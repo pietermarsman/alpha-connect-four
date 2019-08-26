@@ -144,6 +144,9 @@ class AlphaConnectPlayer(Player):
         if self.is_self_play:
             self.root.add_dirichlet_noise = True
 
+            if self.root.is_played:
+                self.root.add_dirichlet_noise_to_action_probs()
+
         self.root.parent = None
 
     def clear_session(self):

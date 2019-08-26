@@ -194,13 +194,13 @@ class AlphaConnectNode(object):
             for action in self.state.allowed_actions:
                 self.children[action].action_prob = action_probs[action]
             if self.add_dirichlet_noise:
-                self._add_dirichlet_noise_to_action_prob()
+                self.add_dirichlet_noise_to_action_probs()
 
         self.total_value += value
         if self.parent is not None:
             self.parent.backup_value(-value, None)
 
-    def _add_dirichlet_noise_to_action_prob(self):
+    def add_dirichlet_noise_to_action_probs(self):
         """Additional dirichlet noise is added to empty state for additional exploration
 
         Dir(0.03) is highly skewed, putting almost all random weight onto a single action.

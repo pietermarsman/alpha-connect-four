@@ -259,7 +259,7 @@ class State(_State):
         state_array = [[['?' for _ in range(FOUR)] for _ in range(FOUR)] for _ in range(FOUR)]
         for (x, y, z), stone in self.stones.items():
             state_array[z][y][x] = str(stone)
-        rows = [[''.join(row) for row in layer] for layer in reversed(state_array)]
+        rows = [[' '.join(row) for row in layer] for layer in reversed(state_array)]
         layers = ['\n'.join(layer_rows) for layer_rows in rows]
         board = '\n\n'.join(layers)
         return board

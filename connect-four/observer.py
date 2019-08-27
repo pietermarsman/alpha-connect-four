@@ -6,6 +6,7 @@ from typing import Tuple, List, Dict
 from game import TwoPlayerGame
 from player import Player, AlphaConnectPlayer
 from state import State, FOUR, Color, Action
+from util import format_in_action_grid
 
 
 class Observer(object):
@@ -19,7 +20,7 @@ class Observer(object):
         pass
 
 
-class ConsoleObserver(Observer):
+class GameStatePrinter(Observer):
     def __init__(self, show_state=True, show_action=True, show_end=True):
         self.show_state = show_state
         self.show_action = show_action
@@ -27,11 +28,12 @@ class ConsoleObserver(Observer):
 
     def notify_new_state(self, game, state: State):
         if self.show_state:
-            print(state)
+            # todo improve board representation: better layout, show actions, reachable positions
+            print(state, end='\n\n')
 
     def notify_new_action(self, game, player: Player, action: Tuple[int, int]):
         if self.show_action:
-            print('\n%s (%s) plays %s' % (player, game.current_state.next_color, action))
+            print('%s (%s) plays %s' % (player, game.current_state.next_color, action))
 
     def notify_end_game(self, game: TwoPlayerGame):
         if self.show_end:
@@ -84,3 +86,29 @@ class AlphaConnectSerializer(Observer):
         policies = [{Action.from_hex(action_hex): value for action_hex, value in policy.items()}
                     for policy in data['policies']]
         return winner, starter, actions, policies
+
+
+class AlphaConnectPrinter(Observer):
+    def notify_new_action(self, game: TwoPlayerGame, player: Player, action: Tuple[int, int]):
+        if isinstance(player, AlphaConnectPlayer):
+            policy = player.root.policy(1.0)
+            evaluation = player.root.average_value
+            emotion = self.express_evaluation_as_emotion(evaluation)
+
+            print('%s is done\nIt looked at %d states\nIt values the current state as %.2f\nIt feels %s' %
+                  (player, player.root.visit_count, evaluation, emotion))
+            print('It wants to play:\n%s' % format_in_action_grid(policy), end='\n\n')
+
+    @staticmethod
+    def express_evaluation_as_emotion(evaluation):
+        if -1 < evaluation <= -.75:
+            emotion = u'\U0001F62D'
+        elif -.75 < evaluation <= -.25:
+            emotion = u'\U0001F61F'
+        elif -.25 < evaluation <= .25:
+            emotion = u'\U0001F610'
+        elif .25 < evaluation < .75:
+            emotion = u'\U0001F642'
+        else:
+            emotion = u'\U0001F600'
+        return emotion

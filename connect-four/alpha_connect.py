@@ -5,7 +5,7 @@ from multiprocessing.pool import Pool
 
 from classifier import train_new_model, write_model
 from game import TwoPlayerGame
-from observer import ConsoleObserver, AlphaConnectSerializer
+from observer import GameStatePrinter, AlphaConnectSerializer
 from player import AlphaConnectPlayer
 from state import State
 from util import list_files, replace_extension
@@ -52,7 +52,7 @@ def simulate_once(model_path, data_dir, exploration=1.0, temperature=1.0, search
                                 self_play=True)
     observers = [AlphaConnectSerializer(data_dir)]
     if verbose:
-        observers.append(ConsoleObserver())
+        observers.append(GameStatePrinter())
     game = TwoPlayerGame(state, player, player, observers)
     game.play()
     player.clear_session()

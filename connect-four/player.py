@@ -11,6 +11,7 @@ from tensorflow.python.keras.engine.saving import load_model
 from analyzer import player_value
 from state import State, FOUR, Action
 from tree import MiniMaxNode, MonteCarloNode, AlphaConnectNode, BatchEvaluator
+from util import format_in_action_grid
 
 
 class Player(metaclass=ABCMeta):
@@ -34,16 +35,21 @@ class Player(metaclass=ABCMeta):
 class ConsolePlayer(Player):
     def decide(self, state: State):
         while True:
-            print('Possible actions:', ', '.join(map(str, sorted(state.allowed_actions))))
+            print('Possible actions:')
+            print(format_in_action_grid({action: str(action) for action in Action.iter_actions()},
+                                        cell_format='{:.2s}', default_value='  '))
             user_input = input('Choose your action: ')
 
             try:
                 action = Action.from_hex(user_input)
                 if action in state.allowed_actions:
+                    print()
                     return action
+                else:
+                    print('Action %s not allowed' % action)
 
             except ValueError:
-                pass
+                print('User input is not an action')
 
 
 class RandomPlayer(Player):

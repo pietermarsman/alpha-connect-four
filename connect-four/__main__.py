@@ -3,15 +3,15 @@ from argparse import ArgumentParser
 from alpha_connect import simulate_once, optimize_continuously, optimize_once, \
     simulate_continuously
 from game import TwoPlayerGame
-from observer import ConsoleObserver
+from observer import GameStatePrinter, AlphaConnectPrinter
 from player import ConsolePlayer, AlphaConnectPlayer
 from state import State
 
 
 def _play_game(args):
-    player2 = ConsolePlayer('You')
-    player1 = AlphaConnectPlayer(args.model_path, 'Computer', time_budget=14500)
-    observers = [ConsoleObserver()]
+    player1 = ConsolePlayer('You')
+    player2 = AlphaConnectPlayer(args.model_path, 'Computer', time_budget=14500)
+    observers = [AlphaConnectPrinter(), GameStatePrinter()]
 
     game = TwoPlayerGame(State.empty(), player1, player2, observers)
 

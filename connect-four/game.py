@@ -23,6 +23,7 @@ class TwoPlayerGame(object):
 
     def play(self):
         self.datetime_start = datetime.datetime.utcnow()
+        self._notify_new_state(self.current_state)
         while not self.current_state.is_end_of_game():
             self._turn()
         self.datetime_end = datetime.datetime.utcnow()

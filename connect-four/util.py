@@ -1,7 +1,7 @@
 import os
-from typing import Iterable
+from typing import Iterable, Dict, Any
 
-from state import Color, State
+from state import Color, State, Action, FOUR
 
 
 def list_files(data_dir, extension=None) -> Iterable[str]:
@@ -24,3 +24,11 @@ def winner_value(winner: Color, state: State):
         return -1.0
     else:
         return 0.0
+
+
+def format_in_action_grid(values: Dict[Action, Any], cell_format='{:4.0%}', default_value='    ', seperator=' '):
+    grid = [[default_value for _ in range(FOUR)] for _ in range(FOUR)]
+    for action, value in values.items():
+        grid[action.y][action.x] = cell_format.format(value)
+
+    return '\n'.join([seperator.join(row) for row in grid])

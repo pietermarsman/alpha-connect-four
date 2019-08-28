@@ -8,7 +8,7 @@ from tensorflow.python.keras import Input, Model, regularizers
 from tensorflow.python.keras import backend as K
 from tensorflow.python.keras.callbacks import EarlyStopping, CSVLogger
 from tensorflow.python.keras.layers import Dense, Conv3D, Flatten, Reshape, \
-    RepeatVector, Permute, BatchNormalization, Concatenate, ReLU
+    RepeatVector, Permute, BatchNormalization, Concatenate, ReLU, Softmax
 from tensorflow.python.keras.optimizers import Adam
 from tqdm import tqdm
 
@@ -82,7 +82,8 @@ def create_model(input_size, filters, c=10 ** -4):
     squash_play = normalized_relu(Conv3D(3, 1, kernel_regularizer=l2)(collapse_play))
     flatten_play = Flatten()(squash_play)
     dense_play = Dense(16, activation='relu', kernel_regularizer=l2)(flatten_play)
-    output_play = Dense(16, activation='softmax')(dense_play)
+    sigmoid_play = Dense(16, activation='sigmoid', kernel_regularizer=l2)(dense_play)
+    output_play = Softmax()(sigmoid_play)
 
     collapse_win = normalized_relu(Conv3D(3, (1, 1, 4), kernel_regularizer=l2)(last_conv))
     flatten_win = Flatten()(collapse_win)
@@ -91,7 +92,7 @@ def create_model(input_size, filters, c=10 ** -4):
 
     model = Model(inputs=input, outputs=[output_play, output_win])
     optimizer = Adam()
-    metics = {'dense_1': 'categorical_accuracy', 'dense_3': 'mae'}
+    metics = {'softmax': 'categorical_accuracy', 'dense_3': 'mae'}
     model.compile(optimizer, ['categorical_crossentropy', 'mse'], metrics=metics)
     return model
 

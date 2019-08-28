@@ -91,13 +91,18 @@ class AlphaConnectSerializer(Observer):
 class AlphaConnectPrinter(Observer):
     def notify_new_action(self, game: TwoPlayerGame, player: Player, action: Tuple[int, int]):
         if isinstance(player, AlphaConnectPlayer):
-            policy = player.root.policy(1.0)
-            evaluation = player.root.average_value
-            emotion = self.express_evaluation_as_emotion(evaluation)
+            mcts_policy = player.root.policy(1.0)
+            mcts_value = player.root.average_value
+            mcts_emotion = self.express_evaluation_as_emotion(mcts_value)
+            raw_policy, raw_value = self.raw_predictions(player, game.current_state)
 
-            print('%s is done\nIt looked at %d states\nIt values the current state as %.2f\nIt feels %s' %
-                  (player, player.root.visit_count, evaluation, emotion))
-            print('It wants to play:\n%s' % format_in_action_grid(policy), end='\n\n')
+            print('%s is done' % player)
+            print('It looked at %d states' % player.root.visit_count)
+            print('At first, it values the current state as %.2f' % raw_value)
+            print('At first, it wants to play:\n%s' % format_in_action_grid(raw_policy))
+            print('After searching, it values the current state as %.2f' % mcts_value)
+            print('After searching, it wants to play:\n%s' % format_in_action_grid(mcts_policy))
+            print('It feels %s' % mcts_emotion, end='\n\n')
 
     @staticmethod
     def express_evaluation_as_emotion(evaluation):
@@ -112,3 +117,9 @@ class AlphaConnectPrinter(Observer):
         else:
             emotion = u'\U0001F600'
         return emotion
+
+    @staticmethod
+    def raw_predictions(player: AlphaConnectPlayer, state: State):
+        pred_actions, pred_value = player.model.model.predict(state.to_numpy(batch=True))
+        action_probs = dict(zip(Action.iter_actions(), pred_actions[0]))
+        return action_probs, pred_value[0].item()

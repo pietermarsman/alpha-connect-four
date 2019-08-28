@@ -110,7 +110,7 @@ class MonteCarloPlayer(Player):
 
 class AlphaConnectPlayer(Player):
     def __init__(self, model_path, name: str = None, exploration=1.0, start_temperature=1.0, time_budget=None,
-                 search_budget=None, self_play=False, batch_size=8):
+                 search_budget=None, self_play=False, batch_size=16):
         self.model = self.load_model(model_path, batch_size)
         self.exploration = exploration
         self._temperature = start_temperature

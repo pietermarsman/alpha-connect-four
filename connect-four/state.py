@@ -273,13 +273,17 @@ class State(_State):
 
     def to_numpy(self, augmentation: Augmentation = None, batch=False):
         if augmentation is None:
-            augmentation = Augmentation.identity()
+            arr = [[[self._encode_position(Position(x, y, z))
+                     for z in range(FOUR)]
+                    for y in range(FOUR)]
+                   for x in range(FOUR)]
+        else:
+            mapping = {position.augment(augmentation): position for position in Position.iter_positions()}
+            arr = [[[self._encode_position(mapping[Position(x, y, z)])
+                     for z in range(FOUR)]
+                    for y in range(FOUR)]
+                   for x in range(FOUR)]
 
-        mapping = {position.augment(augmentation): position for position in Position.iter_positions()}
-        arr = [[[self._encode_position(mapping[Position(x, y, z)])
-                 for z in range(FOUR)]
-                for y in range(FOUR)]
-               for x in range(FOUR)]
         if batch:
             arr = np.array([arr, ])
         return np.array(arr)

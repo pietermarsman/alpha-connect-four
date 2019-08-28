@@ -168,10 +168,9 @@ class AlphaConnectNode(object):
 
     def puct_weights(self, c_puct: float) -> Dict[State, float]:
         """Parameterized upper confidence tree weights for this node"""
-        states = self.children.values()
-        values = [-state.average_value for state in states]
-        visits = [state.action_prob * math.sqrt(self.visit_count) / state.visit_count for state in states]
-        return {state: value + c_puct * visit for state, value, visit in zip(states, values, visits)}
+        return {state: -state.average_value
+                       + c_puct * (state.action_prob * math.sqrt(self.visit_count) / state.visit_count)
+                for state in self.children.values()}
 
     def expand(self):
         if not self.state.is_end_of_game():

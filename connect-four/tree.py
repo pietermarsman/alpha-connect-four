@@ -138,7 +138,7 @@ class AlphaConnectNode(object):
         self.add_dirichlet_noise = add_dirichlet_noise
 
         self.visit_count = 1
-        self.total_value = 0
+        self.total_value = random.normalvariate(0, .01)  # random first move before nn evaluation
         self.action_prob = action_prob
 
     def __str__(self):

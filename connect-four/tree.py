@@ -130,7 +130,7 @@ class MonteCarloNode(object):
 
 
 class AlphaConnectNode(object):
-    def __init__(self, state: State, parent=None, action_prob=None, add_dirichlet_noise=False):
+    def __init__(self, state: State, action_prob, parent=None, add_dirichlet_noise=False):
         self.state = state
         self.parent = parent  # type: Union[AlphaConnectNode, None]
         self.children = {}  # type: Dict[Action, AlphaConnectNode]
@@ -176,7 +176,8 @@ class AlphaConnectNode(object):
         if not self.state.is_end_of_game():
             for action in self.state.allowed_actions:
                 state = self.state.take_action(action)
-                self.children[action] = AlphaConnectNode(state, self, action_prob=1 / len(self.state.allowed_actions))
+                self.children[action] = AlphaConnectNode(state, action_prob=1 / len(self.state.allowed_actions),
+                                                         parent=self)
         self.is_played = True
 
     def lazy_evaluate_and_backup(self, model: 'BatchEvaluator'):

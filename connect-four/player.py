@@ -145,7 +145,7 @@ class AlphaConnectPlayer(Player):
             self.root = self.root.find_state(state)
 
         if self.root is None:
-            self.root = AlphaConnectNode(state)
+            self.root = AlphaConnectNode(state, action_prob=1.0)
 
         if self.is_self_play:
             self.root.add_dirichlet_noise = True

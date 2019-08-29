@@ -68,7 +68,8 @@ parser_optimize_continuously = subparsers.add_parser('optimize-continuously',
                                                      help='train neural network continuously and keep best')
 parser_optimize_continuously.add_argument('data_dir', help='directory where data is stored')
 parser_optimize_continuously.add_argument('model_dir', help='directory where model is stored')
-parser_optimize_continuously.add_argument('--max_games', help='maximum number of games to train on', default=50000)
+parser_optimize_continuously.add_argument('--max_games', help='maximum number of games to train on', default=50000,
+                                          type=int)
 parser_optimize_continuously.set_defaults(func=_optimize_continuously)
 
 # simulate-once

@@ -32,7 +32,7 @@ def _simulate_once(args):
 
 
 def _simulate_continously(args):
-    simulate_continuously(args.model_dir, args.data_dir, args.processes)
+    simulate_continuously(args.model_dir, args.data_dir, args.processes, args.search_budget)
 
 
 def _timeit_single_search(args):
@@ -85,6 +85,7 @@ parser_simulate_continuously = subparsers.add_parser('simulate-continuously',
 parser_simulate_continuously.add_argument('model_dir', help='directory where model is stored')
 parser_simulate_continuously.add_argument('data_dir', help='directory where data is stored')
 parser_simulate_continuously.add_argument('--processes', type=int, help='number of cores to use', default=4)
+parser_simulate_continuously.add_argument('--search_budget', type=int, help='number of mcts searches', default=1600)
 parser_simulate_continuously.set_defaults(func=_simulate_continously)
 
 # timeit

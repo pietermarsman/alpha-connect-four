@@ -32,17 +32,17 @@ def optimize_continuously(model_dir, data_dir, max_games=None, wait=30 * 60):
         time.sleep(wait)
 
 
-def simulate_continuously(model_dir, data_dir, processes=1):
+def simulate_continuously(model_dir, data_dir, processes, search_budget):
     with Pool(processes) as p:
-        for _ in p.imap_unordered(simulate_once_with_newest_model, cycle([(model_dir, data_dir)])):
+        for _ in p.imap_unordered(simulate_once_with_newest_model, cycle([(model_dir, data_dir, search_budget)])):
             pass
 
 
-def simulate_once_with_newest_model(directories):
-    model_dir, data_dir = directories
+def simulate_once_with_newest_model(args):
+    model_dir, data_dir, search_budget = args
     model_iteration, model_path = latest_model_path(model_dir)
     model_data_dir = os.path.join(data_dir, '%6.6d' % model_iteration)
-    simulate_once(model_path, model_data_dir)
+    simulate_once(model_path, model_data_dir, search_budget=search_budget)
 
 
 def simulate_once(model_path, data_dir=None, exploration=1.0, temperature=1.0, search_budget=1600, verbose=False):

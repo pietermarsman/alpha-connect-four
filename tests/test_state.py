@@ -11,7 +11,7 @@ from state import State, Color, FOUR, _lines_on_one_axis, _lines_on_one_diagonal
 @pytest.fixture
 def random_state():
     state = State.empty()
-    for _ in range(16):
+    for _ in range(6):
         action = random.choice(list(state.allowed_actions))
         state = state.take_action(action)
 

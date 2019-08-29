@@ -1,3 +1,4 @@
+import time
 from argparse import ArgumentParser
 
 from alpha_connect import simulate_once, optimize_continuously, optimize_once, \
@@ -32,6 +33,19 @@ def _simulate_once(args):
 
 def _simulate_continously(args):
     simulate_continuously(args.model_dir, args.data_dir, args.processes)
+
+
+def _timeit_single_search(args):
+    print('Preparing player and state')
+    player = AlphaConnectPlayer(args.model_path, start_temperature=None, search_budget=10000)
+    state = State.empty()
+    print('Running search')
+    s0 = time.time()
+    player.decide(state)
+    duration = time.time() - s0
+    print('Done search')
+    print(player.root)
+    print('Total running time: %.2f' % duration)
 
 
 parser = ArgumentParser(description='A game of connect four in three dimensions')
@@ -71,6 +85,11 @@ parser_simulate_continuously.add_argument('model_dir', help='directory where mod
 parser_simulate_continuously.add_argument('data_dir', help='directory where data is stored')
 parser_simulate_continuously.add_argument('--processes', type=int, help='number of cores to use', default=4)
 parser_simulate_continuously.set_defaults(func=_simulate_continously)
+
+# timeit
+parser_timeit = subparsers.add_parser('timeit')
+parser_timeit.add_argument('model_path', type=str, help='path to a serialized neural network')
+parser_timeit.set_defaults(func=_timeit_single_search)
 
 args = parser.parse_args()
 args.func(args)

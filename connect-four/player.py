@@ -25,7 +25,7 @@ class Player(metaclass=ABCMeta):
         return self.name
 
     def __repr__(self):
-        return '%s(name=%s)' % (self.__class__.__name__, self.name)
+        return '%s()' % (self.__class__.__name__)
 
     @abstractmethod
     def decide(self, state: State):
@@ -73,7 +73,11 @@ class GreedyPlayer(Player):
 class MiniMaxPlayer(Player):
     def __init__(self, name: str = None, depth=2):
         super().__init__(name)
+        self._depth = depth
         self.expands = sum(((FOUR * FOUR) ** d for d in range(depth + 1)))
+
+    def __repr__(self):
+        return '%s(depth=%d)' % (self.__class__.__name__, self._depth)
 
     def decide(self, state: State):
         root = MiniMaxNode(state, state.next_color)
@@ -97,6 +101,9 @@ class MonteCarloPlayer(Player):
         self.budget = budget
         super().__init__(name)
 
+    def __repr__(self):
+        return '%s(exploration=%.3f, budget=%d)' % (self.__class__.__name__, self.exploration, self.budget)
+
     def decide(self, state: State):
         t0 = time.time()
         self.root = self.root.find_state(state)
@@ -111,6 +118,7 @@ class MonteCarloPlayer(Player):
 class AlphaConnectPlayer(Player):
     def __init__(self, model_path, name: str = None, exploration=1.0, start_temperature=1.0, time_budget=None,
                  search_budget=None, self_play=False, batch_size=16):
+        self._model_path = model_path
         self.model = self.load_model(model_path, batch_size)
         self.exploration = exploration
         self._temperature = start_temperature
@@ -129,6 +137,17 @@ class AlphaConnectPlayer(Player):
 
         self.history = []
         super().__init__(name)
+
+    def __repr__(self):
+        if self.budget_type == 'time':
+            args = (self.budget, None)
+        else:
+            args = (None, self.budget)
+
+        return '%s(model_path=%r, exploration=%r, start_temperature=%r, time_budget=%r, search_budget=%r, ' \
+               'self_play=%r, batch_size=%r)' % (self.__class__.__name__, self._model_path, self.exploration,
+                                                 self._temperature, args[0], args[1], self.is_self_play,
+                                                 self.model.batch_size)
 
     @staticmethod
     def load_model(model_path, batch_size):

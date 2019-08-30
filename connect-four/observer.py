@@ -44,6 +44,31 @@ class GameStatePrinter(Observer):
                 print('The game is a draw')
 
 
+class GameWinnerSerializer(Observer):
+    def __init__(self, data_dir: str):
+        self.data_dir = data_dir
+
+    def notify_end_game(self, game: TwoPlayerGame):
+        if game.current_state.has_winner():
+            self.save_game(game)
+
+    def save_game(self, game: TwoPlayerGame):
+        data = self.serialize(game)
+        path = os.path.join(self.data_dir, '{date:%Y%m%d_%H%M%S_%f}.json'.format(date=datetime.datetime.now()))
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, 'w') as fout:
+            json.dump(data, fout)
+        print('Written game result to: %s' % path)
+
+    @staticmethod
+    def serialize(game: TwoPlayerGame):
+        return {
+            'white': repr(game.players[Color.WHITE]),
+            'brown': repr(game.players[Color.BROWN]),
+            'winner': repr(game.players[game.current_state.winner])
+        }
+
+
 class AlphaConnectSerializer(Observer):
     def __init__(self, data_dir: str):
         self.data_dir = data_dir

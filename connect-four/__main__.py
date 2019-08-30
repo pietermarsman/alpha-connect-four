@@ -7,6 +7,7 @@ from game import TwoPlayerGame
 from observer import GameStatePrinter, AlphaConnectPrinter
 from player import ConsolePlayer, AlphaConnectPlayer
 from state import State
+from tournament import tournament_continuously
 
 
 def _play_game(args):
@@ -46,6 +47,10 @@ def _timeit_single_search(args):
     print('Done search')
     print(player.root)
     print('Total running time: %.2f' % duration)
+
+
+def _tournament_continously(args):
+    tournament_continuously(args.tournament_dir, args.model_dir, args.processes)
 
 
 parser = ArgumentParser(description='A game of connect four in three dimensions')
@@ -92,6 +97,14 @@ parser_simulate_continuously.set_defaults(func=_simulate_continously)
 parser_timeit = subparsers.add_parser('timeit')
 parser_timeit.add_argument('model_path', type=str, help='path to a serialized neural network')
 parser_timeit.set_defaults(func=_timeit_single_search)
+
+# tournament-continously
+parser_tournament_continuously = subparsers.add_parser('tournament-continously',
+                                                       help='generate games between randomly chosen players')
+parser_tournament_continuously.add_argument('tournament_dir', help='directory where tournament games are stored')
+parser_tournament_continuously.add_argument('--model_dir', help='directory where alpha connect models are stored')
+parser_tournament_continuously.add_argument('--processes', type=int, help='number of cores to use', default=4)
+parser_tournament_continuously.set_defaults(func=_tournament_continously)
 
 args = parser.parse_args()
 args.func(args)

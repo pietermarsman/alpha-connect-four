@@ -39,6 +39,7 @@ def read_data(data_path, max_games=None):
 
     if max_games is not None:
         game_files = list(game_files)[-max_games:]
+        print('Using game files from %s to %s' % (game_files[0], game_files[-1]))
 
     x = []
     y_policy = []

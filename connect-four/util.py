@@ -5,7 +5,8 @@ from state import Color, State, Action, FOUR
 
 
 def list_files(data_dir, extension=None) -> Iterable[str]:
-    for directory_path, _, file_names in os.walk(data_dir):
+    for directory_path, subdirectories, file_names in os.walk(data_dir):
+        subdirectories.sort()  # reading data files relies on having the input in alphabetical order
         for file_name in sorted(file_names):
             if extension is None or file_name.endswith(extension):
                 yield os.path.abspath(os.path.join(directory_path, file_name))

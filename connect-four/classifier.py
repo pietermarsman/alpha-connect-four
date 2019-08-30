@@ -34,7 +34,7 @@ def train_new_model(data_path, log_path=None, max_games=None):
 
 
 def read_data(data_path, max_games=None):
-    game_files = list_files(data_path, '.json')
+    game_files = list(sorted(list_files(data_path, '.json')))
     augmentations = list(Augmentation.iter_augmentations())
 
     if max_games is not None:

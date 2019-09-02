@@ -7,7 +7,7 @@ from game import TwoPlayerGame
 from observer import GameStatePrinter, AlphaConnectPrinter
 from player import ConsolePlayer, AlphaConnectPlayer
 from state import State
-from tournament import tournament_continuously
+from tournament import tournament_continuously, bayes_tournament_elo
 
 
 def _play_game(args):
@@ -50,7 +50,13 @@ def _timeit_single_search(args):
 
 
 def _tournament_continously(args):
-    tournament_continuously(args.tournament_dir, args.model_dir, args.processes)
+    tournament_continuously(args.tournament_dir, args.model_dir, args.processes, args.first_player_name_filter,
+                            args.first_player_kwargs_filter, args.second_player_name_filter,
+                            args.second_player_kwargs_filter)
+
+
+def _tournament_elo(args):
+    bayes_tournament_elo(args.tournament_dir)
 
 
 parser = ArgumentParser(description='A game of connect four in three dimensions')
@@ -102,9 +108,18 @@ parser_timeit.set_defaults(func=_timeit_single_search)
 parser_tournament_continuously = subparsers.add_parser('tournament-continously',
                                                        help='generate games between randomly chosen players')
 parser_tournament_continuously.add_argument('tournament_dir', help='directory where tournament games are stored')
-parser_tournament_continuously.add_argument('--model_dir', help='directory where alpha connect models are stored')
+parser_tournament_continuously.add_argument('model_dir', help='directory where alpha connect models are stored')
 parser_tournament_continuously.add_argument('--processes', type=int, help='number of cores to use', default=4)
+parser_tournament_continuously.add_argument('--first_player_name_filter', help='regex filter for first player name')
+parser_tournament_continuously.add_argument('--first_player_kwargs_filter', help='regex filter for first kwargs')
+parser_tournament_continuously.add_argument('--second_player_name_filter', help='regex filter for second player name')
+parser_tournament_continuously.add_argument('--second_player_kwargs_filter', help='regex filter for second kwargs')
 parser_tournament_continuously.set_defaults(func=_tournament_continously)
+
+# tournament-elo
+parser_tournament_elo = subparsers.add_parser('tournament-elo', help='compute elo score for tournament players')
+parser_tournament_elo.add_argument('tournament_dir', help='directory where tournament games are stored')
+parser.set_defaults(func=_tournament_elo)
 
 args = parser.parse_args()
 args.func(args)

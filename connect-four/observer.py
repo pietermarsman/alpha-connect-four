@@ -49,8 +49,7 @@ class GameWinnerSerializer(Observer):
         self.data_dir = data_dir
 
     def notify_end_game(self, game: TwoPlayerGame):
-        if game.current_state.has_winner():
-            self.save_game(game)
+        self.save_game(game)
 
     def save_game(self, game: TwoPlayerGame):
         data = self.serialize(game)
@@ -62,10 +61,11 @@ class GameWinnerSerializer(Observer):
 
     @staticmethod
     def serialize(game: TwoPlayerGame):
+        winner = game.players.get(game.current_state.winner, None)
         return {
             'white': repr(game.players[Color.WHITE]),
             'brown': repr(game.players[Color.BROWN]),
-            'winner': repr(game.players[game.current_state.winner])
+            'winner': repr(winner)
         }
 
 

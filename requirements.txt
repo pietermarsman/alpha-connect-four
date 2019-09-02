@@ -2,3 +2,5 @@ pytest
 pytest-flake8
 tensorflow
 tqdm
+pystan
+matplotlib

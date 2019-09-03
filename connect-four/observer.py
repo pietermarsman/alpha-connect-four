@@ -29,7 +29,6 @@ class GameStatePrinter(Observer):
 
     def notify_new_state(self, game, state: State):
         if self.show_state:
-            # todo improve board representation: better layout, show actions, reachable positions
             print(state, end='\n\n')
 
     def notify_new_action(self, game, player: Player, action: Tuple[int, int]):
@@ -37,7 +36,7 @@ class GameStatePrinter(Observer):
             print('%s (%s) plays %s' % (player, game.current_state.next_color, action))
         if self.show_action_history:
             actions = ''.join([action.to_hex() for action in game.action_history])
-            print('New action history: %s' % actions)
+            print('Action history: %s' % actions)
 
     def notify_end_game(self, game: TwoPlayerGame):
         if self.show_winner:

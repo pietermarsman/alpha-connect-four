@@ -1,4 +1,5 @@
 from game import TwoPlayerGame
+from observer import GameStatePrinter
 from player import RandomPlayer, GreedyPlayer, MiniMaxPlayer
 from state import State, Color
 
@@ -37,3 +38,12 @@ def test_minimax_is_better_than_greedy():
     game.play()
 
     assert Color.BROWN == game.current_state.winner
+
+
+def test_no_errors_when_playing_and_printing_games():
+    for i in range(100):
+        player1 = RandomPlayer()
+        player2 = RandomPlayer()
+        observers = [GameStatePrinter(show_action_history=True)]
+        game = TwoPlayerGame(State.empty(), player1, player2, observers)
+        game.play()

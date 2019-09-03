@@ -94,8 +94,6 @@ def test_winner_on_diagonal_line_along_side():
     state = state.take_action(Action(1, 0))  # white
     state = state.take_action(Action(0, 0))  # brown
     state = state.take_action(Action(0, 0))  # white
-    print(state)
-    print(_lines())
     assert state.is_end_of_game()
     assert state.winner is Color.WHITE
 
@@ -209,3 +207,9 @@ def test_white_lines_is_updated_after_action():
 
     assert 1 == state.brown_max_line[intersection_postition]
     assert 1 == state.white_max_line[intersection_postition]
+
+
+def test_regression_str_with_top_plane_stones():
+    actions_history = [Action.from_hex(i) for i in '0cf35aa55ae9699663cb8c7447f8ec']
+    state = State.empty().take_actions(actions_history)
+    str(state)

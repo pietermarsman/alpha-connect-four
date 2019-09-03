@@ -4,6 +4,7 @@ from itertools import product, permutations
 from typing import Dict, Set, NamedTuple, Union, List
 
 import numpy as np
+from termcolor import colored
 
 FOUR = 4
 
@@ -265,6 +266,16 @@ class State(_State):
         state_array = [[['?' for _ in range(FOUR)] for _ in range(FOUR)] for _ in range(FOUR)]
         for (x, y, z), stone in self.stones.items():
             state_array[z][y][x] = str(stone)
+        for pin in Action.iter_actions():
+            pin_height = self.pin_height[pin]
+            if pin_height < FOUR:
+                state_array[pin_height][pin.y][pin.x] = '_'
+        for pos, line_length in self.max_lines[1].items():
+            if line_length == FOUR - 1 and self.stones[pos] == Color.NONE:
+                state_array[pos.z][pos.y][pos.x] = colored(state_array[pos.z][pos.y][pos.x], 'red', attrs=['bold'])
+        for pos, line_length in self.max_lines[0].items():
+            if line_length == FOUR - 1 and self.stones[pos] == Color.NONE:
+                state_array[pos.z][pos.y][pos.x] = colored(state_array[pos.z][pos.y][pos.x], 'green', attrs=['bold'])
         rows = [[' '.join(row) for row in layer] for layer in reversed(state_array)]
         layers = ['\n'.join(layer_rows) for layer_rows in rows]
         board = '\n\n'.join(layers)
@@ -294,6 +305,20 @@ class State(_State):
             arr = np.array([arr, ])
         return np.array(arr)
 
+    @property
+    def free_lines(self):
+        if self.next_color == Color.WHITE:
+            return self.white_lines_free, self.brown_lines_free
+        else:
+            return self.brown_lines_free, self.white_lines_free
+
+    @property
+    def max_lines(self):
+        if self.next_color == Color.WHITE:
+            return self.white_max_line, self.brown_max_line
+        else:
+            return self.brown_max_line, self.white_max_line
+
     def _encode_position(self, pos: Position):
         x, y, z = pos
 
@@ -307,16 +332,8 @@ class State(_State):
         top = (z == 3)
         middle_z = not (bottom or top)
 
-        if self.next_color == Color.WHITE:
-            my_lines_free = self.white_lines_free[pos]
-            other_lines_block = self.brown_lines_free[pos]
-            my_max_line = self.white_max_line[pos]
-            other_max_line = self.brown_max_line[pos]
-        else:
-            my_lines_free = self.brown_lines_free[pos]
-            other_lines_block = self.white_lines_free[pos]
-            my_max_line = self.brown_max_line[pos]
-            other_max_line = self.white_max_line[pos]
+        my_lines_free, other_lines_block = self.free_lines
+        my_max_line, other_max_line = self.max_lines
 
         return (
             stone == self.next_color,
@@ -328,8 +345,8 @@ class State(_State):
             bottom,
             top,
             middle_z,
-            my_lines_free,
-            other_lines_block,
-            my_max_line,
-            other_max_line
+            my_lines_free[pos],
+            other_lines_block[pos],
+            my_max_line[pos],
+            other_max_line[pos]
         )

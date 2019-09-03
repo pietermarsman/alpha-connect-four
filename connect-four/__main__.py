@@ -13,15 +13,13 @@ from tournament import tournament_continuously, bayes_tournament_elo
 def _play_game(args):
     player1 = ConsolePlayer('You')
     player2 = AlphaConnectPlayer(args.model_path, 'Computer', time_budget=14500)
-    observers = [AlphaConnectPrinter(), GameStatePrinter()]
+    observers = [AlphaConnectPrinter(), GameStatePrinter(show_action_history=True)]
 
-    if args.actions is None:
-        state = State.empty()
-    else:
-        actions = [Action.from_hex(action_str) for action_str in args.actions]
-        state = State.empty().take_actions(actions)
+    game = TwoPlayerGame(State.empty(), player1, player2, observers)
 
-    game = TwoPlayerGame(state, player1, player2, observers)
+    if args.actions is not None:
+        for action_hex in args.actions:
+            game.play_action(game.next_player(), Action.from_hex(action_hex))
 
     game.play()
 

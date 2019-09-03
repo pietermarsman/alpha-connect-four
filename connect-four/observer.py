@@ -21,10 +21,11 @@ class Observer(object):
 
 
 class GameStatePrinter(Observer):
-    def __init__(self, show_state=True, show_action=True, show_end=True):
+    def __init__(self, show_state=True, show_action=True, show_winner=True, show_action_history=False):
         self.show_state = show_state
         self.show_action = show_action
-        self.show_end = show_end
+        self.show_winner = show_winner
+        self.show_action_history = show_action_history
 
     def notify_new_state(self, game, state: State):
         if self.show_state:
@@ -34,9 +35,12 @@ class GameStatePrinter(Observer):
     def notify_new_action(self, game, player: Player, action: Tuple[int, int]):
         if self.show_action:
             print('%s (%s) plays %s' % (player, game.current_state.next_color, action))
+        if self.show_action_history:
+            actions = ''.join([action.to_hex() for action in game.action_history])
+            print('New action history: %s' % actions)
 
     def notify_end_game(self, game: TwoPlayerGame):
-        if self.show_end:
+        if self.show_winner:
             winner = game.current_state.winner
             if winner is not None:
                 print('The winner is: %s (%s)' % (game.players[winner], winner))

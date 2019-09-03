@@ -31,17 +31,19 @@ class TwoPlayerGame(object):
 
     def _turn(self):
         player = self.next_player()
-        pos = player.decide(self.current_state)
-        self._notify_action(player, pos)
-
-        self.current_state = self.current_state.take_action(pos)
-        self._notify_new_state(self.current_state)
-
-        self.action_history.append(pos)
-        self.state_history.append(self.current_state)
+        action = player.decide(self.current_state)
+        self.play_action(player, action)
 
     def next_player(self) -> Player:
         return self.players[self.current_state.next_color]
+
+    def play_action(self, player, action):
+        self.action_history.append(action)
+        self._notify_action(player, action)
+
+        self.current_state = self.current_state.take_action(action)
+        self.state_history.append(self.current_state)
+        self._notify_new_state(self.current_state)
 
     def _notify_action(self, player, action):
         for observer in self.observers:

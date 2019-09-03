@@ -6,7 +6,7 @@ from alpha_connect import simulate_once, optimize_continuously, optimize_once, \
 from game import TwoPlayerGame
 from observer import GameStatePrinter, AlphaConnectPrinter
 from player import ConsolePlayer, AlphaConnectPlayer
-from state import State
+from state import State, Action
 from tournament import tournament_continuously, bayes_tournament_elo
 
 
@@ -15,7 +15,13 @@ def _play_game(args):
     player2 = AlphaConnectPlayer(args.model_path, 'Computer', time_budget=14500)
     observers = [AlphaConnectPrinter(), GameStatePrinter()]
 
-    game = TwoPlayerGame(State.empty(), player1, player2, observers)
+    if args.actions is None:
+        state = State.empty()
+    else:
+        actions = [Action.from_hex(action_str) for action_str in args.actions]
+        state = State.empty().take_actions(actions)
+
+    game = TwoPlayerGame(state, player1, player2, observers)
 
     game.play()
 
@@ -65,6 +71,7 @@ subparsers = parser.add_subparsers()
 # play
 parser_play = subparsers.add_parser('play', help='play an interactive game of connect four in three dimensions')
 parser_play.add_argument('model_path', help='path where the model should be stored')
+parser_play.add_argument('--actions', help='actions to play in initial state (default: none)')
 parser_play.set_defaults(func=_play_game)
 
 # optimize-once

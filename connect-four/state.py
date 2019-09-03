@@ -1,7 +1,7 @@
 from collections import namedtuple
 from enum import Enum
 from itertools import product, permutations
-from typing import Dict, Set, NamedTuple, Union
+from typing import Dict, Set, NamedTuple, Union, List
 
 import numpy as np
 
@@ -254,6 +254,12 @@ class State(_State):
 
         return State(stones, next_color, pin_height, allowed_actions, number_of_stones, brown_lines,
                      white_lines, brown_lines_free, white_lines_free, brown_max_line, white_max_line, winner)
+
+    def take_actions(self, actions: List[Action]) -> 'State':
+        state = self
+        for action in actions:
+            state = state.take_action(action)
+        return state
 
     def __str__(self):
         state_array = [[['?' for _ in range(FOUR)] for _ in range(FOUR)] for _ in range(FOUR)]

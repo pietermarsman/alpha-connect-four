@@ -11,11 +11,14 @@ from tournament import tournament_continuously, bayes_tournament_elo
 
 
 def _play_game(args):
-    player1 = ConsolePlayer('You')
-    player2 = AlphaConnectPlayer(args.model_path, 'Computer', time_budget=14500)
+    human_player = ConsolePlayer('You')
+    computer_player = AlphaConnectPlayer(args.model_path, 'Computer', time_budget=14500)
     observers = [AlphaConnectPrinter(), GameStatePrinter(show_action_history=True)]
 
-    game = TwoPlayerGame(State.empty(), player1, player2, observers)
+    if args.human_first:
+        game = TwoPlayerGame(State.empty(), human_player, computer_player, observers)
+    else:
+        game = TwoPlayerGame(State.empty(), computer_player, human_player, observers)
 
     if args.actions is not None:
         for action_hex in args.actions:
@@ -53,7 +56,7 @@ def _timeit_single_search(args):
     print('Total running time: %.2f' % duration)
 
 
-def _tournament_continously(args):
+def _tournament_continuously(args):
     tournament_continuously(args.tournament_dir, args.model_dir, args.processes, args.first_player_name_filter,
                             args.first_player_kwargs_filter, args.second_player_name_filter,
                             args.second_player_kwargs_filter)
@@ -70,6 +73,8 @@ subparsers = parser.add_subparsers()
 parser_play = subparsers.add_parser('play', help='play an interactive game of connect four in three dimensions')
 parser_play.add_argument('model_path', help='path where the model should be stored')
 parser_play.add_argument('--actions', help='actions to play in initial state (default: none)')
+parser_play.add_argument('--human_second', help='let console player go second', dest='human_first', default=True,
+                         action='store_false')
 parser_play.set_defaults(func=_play_game)
 
 # optimize-once
@@ -119,7 +124,7 @@ parser_tournament_continuously.add_argument('--first_player_name_filter', help='
 parser_tournament_continuously.add_argument('--first_player_kwargs_filter', help='regex filter for first kwargs')
 parser_tournament_continuously.add_argument('--second_player_name_filter', help='regex filter for second player name')
 parser_tournament_continuously.add_argument('--second_player_kwargs_filter', help='regex filter for second kwargs')
-parser_tournament_continuously.set_defaults(func=_tournament_continously)
+parser_tournament_continuously.set_defaults(func=_tournament_continuously)
 
 # tournament-elo
 parser_tournament_elo = subparsers.add_parser('tournament-elo', help='compute elo score for tournament players')

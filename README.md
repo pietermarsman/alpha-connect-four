@@ -1,6 +1,8 @@
 # 3D Connect Four AI
 
-This project implements several computer players that can play 3D Connect Four: 
+This project implements several computer players that can play 3D Connect Four.
+
+![Connect four game](docs/connect-four.png)
 
 Reference players: 
 
@@ -13,8 +15,6 @@ Model based players:
 - an [AlphaGo Zero](https://en.wikipedia.org/wiki/AlphaGo_Zero) player that uses a policy neural network
 
 The best player is the AlphaGo Zero player and the command-line util focusses on interacting and improving that. 
-
-![alt text](docs/connect-four.png)
 
 ## Play iteractive game against `AlphaConnectPlayer`
 
